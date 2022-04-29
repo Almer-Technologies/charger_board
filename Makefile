@@ -11,7 +11,7 @@ MCU=atmega328p
 
 CPU_FREQ=16000000UL
 
-OPT=s
+OPT=0
 
 FORMAT=ihex
 
@@ -58,44 +58,51 @@ AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 115200
 
 
 CFLAGS=-O$(OPT) $(DEBUG_LEVEL) -DF_CPU=$(CPU_FREQ) -mmcu=$(MCU)\
-$(WARNINGS)
+$(WARNINGS) -nostdlib 
 
 
 
 
 BUILDDIR = build
 SOURCEDIR = src
-HEADERDIR = src
+HEADERDIR = inc
 
-SOURCES = $(wildcard $(SOURCEDIR)/*.c)
-OBJECTS = $(patsubst $(SOURCEDIR)/%.c, $(BUILDDIR)/%.o, $(SOURCES))
+ASOURCES = $(wildcard $(SOURCEDIR)/*.s)
+CSOURCES = $(wildcard $(SOURCEDIR)/*.c)
+OBJECTS =  $(patsubst $(SOURCEDIR)/%.s, $(BUILDDIR)/%.o, $(ASOURCES))
+OBJECTS += $(patsubst $(SOURCEDIR)/%.c, $(BUILDDIR)/%.o, $(CSOURCES)) 
+ 
+CURR_DIR = $(notdir $(shell pwd))
 
 
-
-all: $(TARGET).elf $(TARGET).hex
+all: $(TARGET).elf $(TARGET).hex $(TARGET).lst
 
 $(TARGET).elf: $(OBJECTS)
-	${CC} -mmcu=${MCU} -o $@ $^
+	@echo "[build] compiling elf file: " $^
+	${CC} -mmcu=${MCU} $(CFLAGS) -o $@ $^
 
 
 %.hex: %.elf
+	@echo "[build] copying binary: " $<
 	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
+
+%.lst: %.elf
+	@echo "[build] dumping listing: " $<
+	$(OBJDUMP) -h -S $< > $@
 
 # Compile: create object files from C source files.
 $(BUILDDIR)/%.o : $(SOURCEDIR)/%.c
-	$(CC) -c $(CFLAGS) -I$(HEADERDIR) -I$(SOURCEDIR) $< -o $@
-
-# Compile: create assembler files from C source files.
-$(BUILDDIR)/%.s : $(SOURCEDIR)/%.c
-	$(CC) -S $(CFLAGS) $< -o $@
+	@echo "[build] compiling objects from c source: " $<
+	$(CC) -c -I$(HEADERDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
 
 # Assemble: create object files from assembler source files.
-$(BUILDDIR)/%.o : $(SOURCEDIR)/%.S
-	$(CC) -c $(CFLAGS) $< -o $@
+$(BUILDDIR)/%.o : $(SOURCEDIR)/%.s
+	@echo "[build] compiling objects from s source: " $<
+	$(CC) -c -I$(HEADERDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
 
 clean:
 	$(REMOVE) build/*
-	$(REMOVE) *.elf *.hex
+	$(REMOVE) *.elf *.hex *.lst
 
 program: $(TARGET).hex
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
