@@ -34,10 +34,10 @@
  **********************/
 
 typedef enum os_thread_state{
-    OS_RUNNING,
-    OS_READY,
-    OS_SUSPENDED,
-    OS_DISABLED
+	OS_RUNNING,
+	OS_READY,
+	OS_SUSPENDED,
+	OS_DISABLED
 }os_thread_state_t;
 
 
@@ -49,10 +49,10 @@ typedef uint8_t os_priority_t;
 typedef struct os_thread os_thread_t;
 
 struct os_thread {
-    os_thread_t * next;
-    os_priority_t priority;
-    port_context_t context;
-    os_thread_state_t state;
+	os_thread_t * next;
+	os_priority_t priority;
+	port_context_t context;
+	os_thread_state_t state;
 };
 
 /**********************

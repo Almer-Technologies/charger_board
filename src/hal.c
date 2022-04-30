@@ -1,5 +1,5 @@
 /*  Title		: HAL
- *  Filename	: hal.c
+ *  Filename		: hal.c
  *	Author		: iacopo sprenger
  *	Date		: 30.04.2022
  *	Version		: 0.1
@@ -45,20 +45,20 @@
 
 void hal_systick_init(void) {
 
-    TCCR0A = 0b10; //ctc mode
+	TCCR0A = 0b10; //ctc mode
 
-    OCR0A = 249; //250-1
-    //--> this gives us an interrupt freq of 1ms
+	OCR0A = 249; //250-1
+	//--> this gives us an interrupt freq of 1ms
 
 
-    //using timer0 with prescaler /8
-    //also start timer
-    TCCR0B = 0b011<<CSO;
-    
-    TCNT0 = 0;
-    
+	//using timer0 with prescaler /8
+	//also start timer
+	TCCR0B = 0b011<<CSO;
 
-    TIMSK0 = 1<<OCIExA; //enable compare A interrupt
+	TCNT0 = 0;
+
+
+	TIMSK0 = 1<<OCIExA; //enable compare A interrupt
 }
 
 

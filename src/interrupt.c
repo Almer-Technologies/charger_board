@@ -43,7 +43,7 @@
  **********************/
 
 
-void __attribute__((signal)) timer_compa_int(void) {
+void __attribute__((signal)) timer0_compa_int(void) {
 
 	static uint16_t i = 0;
 	i++;
