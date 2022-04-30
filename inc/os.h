@@ -33,6 +33,10 @@
  *  TYPEDEFS
  **********************/
 
+typedef uint8_t os_priority_t;
+
+typedef struct os_thread os_thread_t;
+
 
 /**********************
  *  VARIABLES

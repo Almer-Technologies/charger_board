@@ -12,6 +12,7 @@
 
 #include "atmega328p.h"
 #include "os.h"
+#include "hal.h"
 
 /**********************
  *	CONSTANTS
@@ -46,12 +47,14 @@ int main(void) {
 
 	DDRB = 32;
 	PORTB = 32;
+	
+	hal_systick_init();
 
+	sei();
 	//os_system_init();
 
 	//infinite loop lock
 	for(;;) {
-
 	}
 }
 

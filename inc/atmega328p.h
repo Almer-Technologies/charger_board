@@ -95,14 +95,29 @@
 #define WDTCSR  _MMIO_BYTE(0x60)
 #define CLKPR   _MMIO_BYTE(0x61)
 
+
+
 #define PRR     _MMIO_BYTE(0x64)
+
+
+#define TIMSK0  _MMIO_BYTE(0x6E)
+
 
 
 /**********************
  *  BIT FIELDS
  **********************/
 
+//timers
+#define CSO	0U
 
+#define TOIEx	0U
+#define OCIExA	1U
+#define OCIExB	2U
+
+#define TOIEx	0U
+#define OCIExA	1U
+#define OCIExB	2U
 
 
 

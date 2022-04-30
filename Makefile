@@ -11,13 +11,13 @@ MCU=atmega328p
 
 CPU_FREQ=16000000UL
 
-OPT=3
+OPT=s
 
 FORMAT=ihex
 
-DEBUG_LEVEL=-g
+DEBUG_LEVEL=
 
-WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
+WARNINGS=-Wall #-Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
 
@@ -75,7 +75,7 @@ OBJECTS += $(patsubst $(SOURCEDIR)/%.c, $(BUILDDIR)/%.o, $(CSOURCES))
 CURR_DIR = $(notdir $(shell pwd))
 
 
-all: $(TARGET).elf $(TARGET).hex $(TARGET).lst
+all: clean $(TARGET).elf $(TARGET).hex $(TARGET).lst
 
 $(TARGET).elf: $(OBJECTS)
 	@echo "[build] compiling elf file: " $^
@@ -104,7 +104,7 @@ clean:
 	$(REMOVE) build/*
 	$(REMOVE) *.elf *.hex *.lst
 
-program: $(TARGET).hex
+program: clean $(TARGET).hex
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
 
 

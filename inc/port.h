@@ -29,6 +29,16 @@
  *  MACROS
  **********************/
 
+#define cli() \
+    asm volatile ("cli"::)
+
+
+#define sei() \
+    asm volatile ("sei"::)
+
+#define reti() \
+    asm volatile ("reti"::)
+
 
 /**********************
  *  TYPEDEFS
