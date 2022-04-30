@@ -11,7 +11,7 @@ MCU=atmega328p
 
 CPU_FREQ=16000000UL
 
-OPT=0
+OPT=3
 
 FORMAT=ihex
 
@@ -58,7 +58,7 @@ AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 115200
 
 
 CFLAGS=-O$(OPT) $(DEBUG_LEVEL) -DF_CPU=$(CPU_FREQ) -mmcu=$(MCU)\
-$(WARNINGS) -nostdlib 
+$(WARNINGS) -nostdlib
 
 
 
