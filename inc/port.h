@@ -208,6 +208,12 @@ static inline void port_create_context(port_context_t* ctx) {
 
 
 
-#endif /* OS_H */
+static inline void port_context_init(port_context_t* ctx, void (*entry)(void), uint8_t * stack, uint16_t stack_size) {
+    ctx->stack_top = &stack[stack_size-1]; //get last element of stack
+    ctx->entry = (void*) entry;
+}
+
+
+#endif /* PORT_H */
 
 /* END */

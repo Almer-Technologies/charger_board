@@ -34,6 +34,8 @@
  **********************/
 
 
+
+
 /**********************
  *	PROTOTYPES
  **********************/
@@ -43,10 +45,27 @@
  *	DECLARATIONS
  **********************/
 
+
+
+void thread_a_entry(void) {
+
+}
+
+void thread_b_entry(void) {
+
+}
+
 int main(void) {
 
 	DDRB = 32;
 	PORTB = 32;
+
+	static os_thread_t thread_a, thread_b;
+	static uint8_t stack_a[1024];
+	static uint8_t stack_b[1024];
+
+	os_thread_createI(&thread_a, 1, thread_a_entry, stack_a, 1024);	
+	os_thread_createI(&thread_b, 2, thread_b_entry, stack_b, 1024);
 	
 	hal_systick_init();
 

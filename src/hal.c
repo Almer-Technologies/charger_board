@@ -45,7 +45,7 @@
 
 void hal_systick_init(void) {
 
-    TCCR0A = 0b10;
+    TCCR0A = 0b10; //ctc mode
 
     OCR0A = 249; //250-1
     //--> this gives us an interrupt freq of 1ms
@@ -53,8 +53,9 @@ void hal_systick_init(void) {
 
     //using timer0 with prescaler /8
     //also start timer
-    TCCR0B = 0b010<<CSO;
+    TCCR0B = 0b011<<CSO;
     
+    TCNT0 = 0;
     
 
     TIMSK0 = 1<<OCIExA; //enable compare A interrupt

@@ -44,8 +44,13 @@
 
 
 void __attribute__((signal)) timer_compa_int(void) {
-    DDRB = 32;
-    PORTB ^= 32;
+
+	static uint16_t i = 0;
+	i++;
+	if(i == 1000) {
+		PORTB ^= 32;
+		i = 0;
+	}
 
 }
 
