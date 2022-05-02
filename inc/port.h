@@ -39,6 +39,13 @@
 #define reti() \
     asm volatile ("reti"::)
 
+#define nop() \
+    asm volatile ("nop"::)
+
+
+
+
+
 
 /**********************
  *  TYPEDEFS

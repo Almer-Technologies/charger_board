@@ -26,17 +26,50 @@
  *  CONSTANTS
  **********************/
 
+#define HAL_GPIO_OUT    1
+#define HAL_GPIO_IN     0
+
 
 /**********************
  *  MACROS
  **********************/
+
+/* hal gpio */
+
+#define hal_gpio_init_out(port, pins) \
+    _IO_BYTE((port)+GPIO_DDRx) |= (pins); \
+    nop()
+
+#define hal_gpio_init_in(port, pins) \
+    _IO_BYTE((port)+GPIO_DDRx) &= ~(pins); \
+    nop()
+
+#define hal_gpio_init_in_pup(port, pins) \
+    _IO_BYTE((port)+GPIO_DDRx) &= ~(pins); \
+    _IO_BYTE((port)+GPIO_PORTx) |= (pins); \
+    nop()
+
+#define hal_gpio_get(port, pin) \
+    _IO_BYTE((port)+GPIO_PINx) & (pin) ? 1 : 0
+
+#define hal_gpio_set(port, pin) \
+    _IO_BYTE((port)+GPIO_PORTx) |= (pin)
+
+#define hal_gpio_clr(port, pin) \
+    _IO_BYTE((port)+GPIO_PORTx) &= ~(pin)
+
+#define hal_gpio_tgl(port, pin) \
+    _IO_BYTE((port)+GPIO_PORTx) ^= (pin)
+
 
 
 /**********************
  *  TYPEDEFS
  **********************/
 
-typedef struct hal_timer hal_timer_t;
+
+typedef uint32_t hal_systick_t;
+
 
 
 /**********************
@@ -48,7 +81,18 @@ typedef struct hal_timer hal_timer_t;
  *  PROTOTYPES
  **********************/
 
+/* hal delay */
+void hal_delay(uint32_t delay_ms);
+
+/* hal uart */
+void hal_uart_init(void);
+void hal_uart_send_char(uint8_t data);
+void hal_uart_send(uint8_t * data, uint16_t len);
+void hal_uart_send_it(uint8_t * data, uint16_t len);
+
+/* hal systick */
 void hal_systick_init(void);
+hal_systick_t hal_systick_get(void);
 
 
 

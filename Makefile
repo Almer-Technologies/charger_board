@@ -7,6 +7,8 @@ TARGET=sanpellegrinos
 
 #parameters
 
+TOOLCHAIN=../avr8-gnu-toolchain-linux_x86_64/bin
+
 MCU=atmega328p
 
 CPU_FREQ=16000000UL
@@ -15,7 +17,7 @@ OPT=s
 
 FORMAT=ihex
 
-DEBUG_LEVEL=
+DEBUG_LEVEL=-g
 
 WARNINGS=-Wall #-Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
@@ -25,11 +27,11 @@ WARNINGS=-Wall #-Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-alig
 
 SHELL = sh
 
-CC = avr-gcc
+CC = $(TOOLCHAIN)/avr-gcc
 
-OBJCOPY = avr-objcopy
-OBJDUMP = avr-objdump
-SIZE = avr-size
+OBJCOPY = $(TOOLCHAIN)/avr-objcopy
+OBJDUMP = $(TOOLCHAIN)/avr-objdump
+SIZE = $(TOOLCHAIN)/avr-size
 
 AVRDUDE=avrdude
 
@@ -58,7 +60,7 @@ AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 115200
 
 
 CFLAGS=-O$(OPT) $(DEBUG_LEVEL) -DF_CPU=$(CPU_FREQ) -mmcu=$(MCU)\
-$(WARNINGS) -nostdlib
+$(WARNINGS) -nostartfiles
 
 
 
@@ -104,7 +106,7 @@ clean:
 	$(REMOVE) build/*
 	$(REMOVE) *.elf *.hex *.lst
 
-program: clean $(TARGET).hex
+program: clean $(TARGET).elf $(TARGET).hex $(TARGET).lst
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
 
 

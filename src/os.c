@@ -89,10 +89,9 @@ void os_thread_createI(	os_thread_t * thd,
 	thd->state = OS_DISABLED;
 	thd->next = 0;
 	port_context_init(&thd->context, entry, stack, stack_size);
-	os_scheduler_add_thread(&scheduler, thd);
+	os_scheduler_add_threadI(&scheduler, thd);
 
 	thd->state = OS_READY; //start thread
-
 }
 
 

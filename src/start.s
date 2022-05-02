@@ -16,6 +16,7 @@
 
 .global main
 .global timer0_cmpa_int
+.global usart_dre_int
 
 .org 0x0000	; Reset vector
 	jmp	reset
@@ -46,7 +47,7 @@
 .org 0x0034	; Timer/Counter1 Overflow
 	jmp	int_guard
 .org 0x0038	; TimerCounter0 Compare Match A
-	jmp	timer_compa_int
+	jmp	timer0_compa_int
 .org 0x003c	; TimerCounter0 Compare Match B
 	jmp	int_guard
 .org 0x0040	; Timer/Couner0 Overflow
@@ -56,7 +57,7 @@
 .org 0x0048	; USART Rx Complete
 	jmp	int_guard
 .org 0x004c	; USART, Data Register Empty
-	jmp	int_guard
+	jmp	usart_dre_int
 .org 0x0050	; USART Tx Complete
 	jmp	int_guard
 .org 0x0054	; ADC Conversion Complete
