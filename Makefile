@@ -13,13 +13,13 @@ MCU=atmega328p
 
 CPU_FREQ=16000000UL
 
-OPT=s
+OPT=0
 
 FORMAT=ihex
 
 DEBUG_LEVEL=-g
 
-WARNINGS=-Wall #-Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
+WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
 
@@ -60,7 +60,7 @@ AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 115200
 
 
 CFLAGS=-O$(OPT) $(DEBUG_LEVEL) -DF_CPU=$(CPU_FREQ) -mmcu=$(MCU)\
-$(WARNINGS) -nostartfiles
+$(WARNINGS)
 
 
 

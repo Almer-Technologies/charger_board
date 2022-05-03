@@ -55,6 +55,11 @@ void thread_b_entry(void) {
 
 }
 
+void cb(void) {
+	static const uint8_t  done[] = "done\n\r"; 
+	static const uint16_t done_len = sizeof(done);
+	hal_uart_send_it(done, done_len, NULL);
+}
 
 
 int main(void) {
@@ -68,6 +73,9 @@ int main(void) {
 	
 	hal_systick_init();
 	hal_uart_init();
+	static const uint8_t  start[] = "start\n\r"; 
+	static const uint16_t start_len = sizeof(start); 
+	hal_uart_send(start, start_len);
 
 	hal_gpio_init_out(GPIOD, PIN2|PIN3);
 	hal_gpio_init_out(GPIOB, PIN5);
@@ -81,16 +89,12 @@ int main(void) {
 	for(;;) {
 
 		static const uint8_t  message[] = "hello\n\r"; 
-		static const uint16_t message_len = 7; 
-		uint8_t data = (uint8_t) (hal_systick_get()>>8)+'0';
+		static const uint16_t message_len = sizeof(message);
 		hal_gpio_set(GPIOD, PIN2);
-		hal_uart_send(message, message_len);
-		hal_uart_send_char(data);
+		hal_uart_send_it(message, message_len, cb);
 		hal_gpio_clr(GPIOD, PIN2);
 
-		hal_gpio_set(GPIOD, PIN3);
-		hal_delay(100);
-		hal_gpio_clr(GPIOD, PIN3);
+		hal_delay(500);
 
 	}
 }

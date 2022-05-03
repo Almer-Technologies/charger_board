@@ -30,6 +30,9 @@
 #define HAL_GPIO_IN     0
 
 
+#define NULL (void*) 0
+
+
 /**********************
  *  MACROS
  **********************/
@@ -88,7 +91,7 @@ void hal_delay(uint32_t delay_ms);
 void hal_uart_init(void);
 void hal_uart_send_char(uint8_t data);
 void hal_uart_send(uint8_t * data, uint16_t len);
-void hal_uart_send_it(uint8_t * data, uint16_t len);
+void hal_uart_send_it(uint8_t * data, uint16_t len, void (*tx_cmplt)(void));
 
 /* hal systick */
 void hal_systick_init(void);
