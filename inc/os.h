@@ -34,10 +34,11 @@
  **********************/
 
 typedef enum os_thread_state{
-	OS_RUNNING,
-	OS_READY,
-	OS_SUSPENDED,
-	OS_DISABLED
+	OS_RUNNING,	//Thread is currently running
+	OS_READY,	//Thread is ready to run
+	OS_SUSPENDED,	//Thread is suspended (waiting on scheduled time)
+	OS_WAITING,	//Thread is waiting for an event
+	OS_DISABLED	//Thread is disabled
 }os_thread_state_t;
 
 
@@ -48,11 +49,17 @@ typedef uint8_t os_priority_t;
 
 typedef struct os_thread os_thread_t;
 
+typedef struct os_event {
+	uint8_t dummy;
+}os_event_t;
+
 struct os_thread {
 	os_thread_t * next;
 	os_priority_t priority;
 	port_context_t context;
 	os_thread_state_t state;
+	hal_systick_t suspended_timer;
+	os_event_t * waiting_event;
 };
 
 /**********************

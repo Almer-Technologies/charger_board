@@ -78,6 +78,7 @@ void hal_delay(uint32_t delay_ms) {
 void hal_uart_init(void) {
 
 	uart.tx_busy = 0;
+	uart.rx_busy = 0;
 
 	uint16_t ubrr = 8; //115200 baud
 
@@ -131,7 +132,7 @@ void hal_uart_send_it(uint8_t * data, uint16_t len, void (*tx_cmplt)(void)) {
 }
 
 uint8_t hal_uart_recv_char(void) {
-	while (!(UCSR0A & (1<<RXCx))); //wait prev data to be transmitted
+	while (!(UCSR0A & (1<<RXCx))); //wait for char to arrive
 	return UDR0;
 }
 
@@ -143,7 +144,25 @@ void hal_uart_recv(uint8_t * data, uint16_t len) {
 	uart.rx_len = len;
 	uart.rx_data = data;
 	uart.rx_data_p = 0;
+	while(uart.rx_data_p < uart.rx_len) {
+		while(!(UCSR0A & (1<<RXCx))); //wait for char to arrive
+		uart.rx_data[uart.rx_data_p++] = UDR0;
+	}
+	uart.rx_busy = 0;
+}
 
+void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void)) {
+	if(uart.rx_busy) {
+		return;
+	}
+	uart.rx_busy = 1;
+	uart.rx_len = len;
+	uart.rx_data = data;
+	uart.rx_data_p = 0;
+	uart.rx_cmplt = rx_cmplt;
+
+	//enable uart rx interrupt
+	UCSR0B |= 1<<RXCIEx; 
 }
 
 
@@ -217,6 +236,19 @@ ISR(USART_TX_vect) {
 	if(uart.tx_cmplt) {
 		uart.tx_cmplt();
 	}
+}
+
+ISR(USART_RX_vect) {
+	//transmission complete
+	uart.rx_data[uart.rx_data_p++] = UDR0;
+	if(uart.rx_data_p >= uart.rx_len) {
+		UCSR0B &= ~(1<<RXCIEx);
+		uart.rx_busy = 0;
+		if(uart.rx_cmplt) {
+			uart.rx_cmplt();
+		}
+	}
+	
 }
 
 /* END */

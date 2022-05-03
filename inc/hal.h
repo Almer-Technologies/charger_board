@@ -92,6 +92,9 @@ void hal_uart_init(void);
 void hal_uart_send_char(uint8_t data);
 void hal_uart_send(uint8_t * data, uint16_t len);
 void hal_uart_send_it(uint8_t * data, uint16_t len, void (*tx_cmplt)(void));
+uint8_t hal_uart_recv_char(void);
+void hal_uart_recv(uint8_t * data, uint16_t len);
+void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void));
 
 /* hal systick */
 void hal_systick_init(void);

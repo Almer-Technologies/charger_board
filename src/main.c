@@ -85,13 +85,18 @@ int main(void) {
 	sei();
 	//os_system_init();
 
+
+
 	//infinite loop lock
 	for(;;) {
 
 		static const uint8_t  message[] = "hello\n\r"; 
 		static const uint16_t message_len = sizeof(message);
+		uint8_t msg[7];
+		hal_uart_recv_it(msg, 7, cb);
 		hal_gpio_set(GPIOD, PIN2);
-		hal_uart_send_it(message, message_len, cb);
+		//hal_uart_send(message, message_len);
+		//hal_uart_send(msg, 7);
 		hal_gpio_clr(GPIOD, PIN2);
 
 		hal_delay(500);
