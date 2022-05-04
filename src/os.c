@@ -12,10 +12,13 @@
 
 #include "os.h"
 #include "port.h"
+#include "hal.h"
 
 /**********************
  *	CONSTANTS
  **********************/
+
+#define IDLE_STACK_SIZE	64
 
 
 /**********************
@@ -44,6 +47,12 @@ typedef struct os_scheduler {
 
 static os_scheduler_t scheduler;
 
+static os_thread_t idle_thread = {
+	.name="idle_thd"
+};
+static uint8_t idle_stack[IDLE_STACK_SIZE];
+
+
 /**********************
  *	PROTOTYPES
  **********************/
@@ -53,6 +62,12 @@ void os_scheduler_add_thread(	os_scheduler_t * sch,
 
 void os_scheduler_add_threadI(	os_scheduler_t * sch,
 				os_thread_t * thd);
+
+os_thread_t * os_scheduler_get_ready(os_scheduler_t * sch);
+
+void os_system_switch(os_thread_t * old, os_thread_t * new);
+
+void os_system_panic(const uint8_t * msg);
 
 /**********************
  *	DECLARATIONS
@@ -69,7 +84,8 @@ void os_thread_create(	os_thread_t * thd,
 
 	thd->priority = prio;
 	thd->state = OS_DISABLED;
-	thd->next = 0;
+	thd->existing = 0;
+	thd->next = NULL;
 	port_context_init(&thd->context, entry, stack, stack_size);
 	os_scheduler_add_thread(&scheduler, thd);
 
@@ -87,12 +103,26 @@ void os_thread_createI(	os_thread_t * thd,
 
 	thd->priority = prio;
 	thd->state = OS_DISABLED;
-	thd->next = 0;
+	thd->existing = 0;
+	thd->next = NULL;
 	port_context_init(&thd->context, entry, stack, stack_size);
 	os_scheduler_add_threadI(&scheduler, thd);
 
 	thd->state = OS_READY; //start thread
 }
+
+
+void os_thread_list(void) {
+	hal_print("threads list\n\r");
+	os_thread_t * node;
+	for( node = scheduler.head; node != NULL; node = node->next) {
+		hal_print(node->name);
+		hal_print(" ");
+		hal_uart_send_char('0'+node->priority);
+		hal_print("\r\n");
+	}	
+}
+
 
 
 /* os_scheduler */
@@ -104,7 +134,7 @@ void os_scheduler_add_thread(	os_scheduler_t * sch,
 				os_thread_t * thd) {
 	cli();
 	os_thread_t * node;
-	for( node = sch->head; node->next != 0; node = node->next) {
+	for( node = sch->head; node != NULL; node = node->next) {
 		if(node->priority < thd->priority) {
 			thd->next = node;
 			node = thd;
@@ -119,36 +149,59 @@ void os_scheduler_add_thread(	os_scheduler_t * sch,
 
 void os_scheduler_add_threadI(	os_scheduler_t * sch,
 				os_thread_t * thd) {
-	os_thread_t * node;
-	for( node = sch->head; node->next != 0; node = node->next) {
-		if(node->priority < thd->priority) {
-			thd->next = node;
-			node = thd;
+	os_thread_t ** node;
+	for( node = &(sch->head); (*node) != NULL; node = &((*node)->next)) {
+		if((*node)->priority < thd->priority) {
+			thd->next = (*node);
+			(*node) = thd;
 			return;
 		}
 	} 
 	//case where the thread is last
-	node->next = thd;
+	os_system_panic("no idle thread");
 }
 
-os_thread_t * os_scheduler_runI(os_scheduler_t * sch) {
+//returns thread with highest priority that is ready.
+os_thread_t * os_scheduler_get_ready(os_scheduler_t * sch) {
 	os_thread_t * node;
-	for( node = sch->head; (node->next != 0) || (node->priority > sch->running->priority); node = node->next) {
+	for( node = sch->head; (node->next != 0); node = node->next) {
 		if(node->state == OS_READY) {
-			sch->running->state = OS_READY;
-			node->state = OS_RUNNING;
-			sch->running = node;
-			return sch->running;
+			return node;
 		}
 	}
+	//this should return the idle thread
+	return NULL;
 }
 
-//init system
+
+
+
+
+
+/* os system */
+
+void os_system_idle(void) {
+
+}
+
 void os_system_init(void) {
+
+	//setup idle thread
+
+	idle_thread.priority = 0;
+	idle_thread.next = NULL;
+	idle_thread.state = OS_READY;
+	idle_thread.existing = 0;
+
+	port_context_init(&idle_thread.context, os_system_idle, idle_stack, IDLE_STACK_SIZE);
+
 
 	//setup scheduler
 
-	//setup idle task
+	scheduler.head = &idle_thread;
+	scheduler.running = &idle_thread;
+
+	
 
 
 }
@@ -160,7 +213,84 @@ void os_system_start(void) {
 
 	//enable interrupts
 
+}
+
+void os_system_panic(const uint8_t * msg) {
+	cli();
+	while(1) {
+		hal_uart_send("PANIC\n\r", 7);
+		hal_uart_send(msg, sizeof(msg));
+
+	}
+}
+
+//reschedule system
+void os_system_reschedule(void) {
+
+	os_thread_t * old = scheduler.running;
+	//run scheduler
+	os_thread_t * new = os_scheduler_get_ready(&scheduler);
+
+	if(new == scheduler.running) {
+		return;
+	} else {
+		os_system_switch(old, new);
+	}
+}
+
+//switch context
+void os_system_switch(os_thread_t * old, os_thread_t * new) {
+	port_context_store(&old->context);
+	if(new->existing) {
+		port_context_restore(&new->context);
+	} else {
+		new->existing = 1;
+		port_context_create(&new->context);
+	}
 
 }
+
+
+/* os_delay */
+
+//compute new delay time and set task to ready if timeout
+void os_delay_compute(void){
+	os_thread_t * node;
+	for( node = scheduler.head; (node->next != 0); node = node->next) {
+		if(node->state == OS_SUSPENDED) {
+			node->suspended_timer--; //remove 1ms from suspended timer
+			if(node->suspended_timer == 0) {
+				node->state = OS_READY;
+			}
+		}
+	}
+}
+
+void os_delay(hal_systick_t delay) {
+	scheduler.running->state = OS_SUSPENDED;
+	scheduler.running->suspended_timer = delay;
+	os_system_reschedule();
+}
+
+void os_delay_windowed(hal_systick_t * last_wake, hal_systick_t delay) {
+	hal_systick_t time = hal_systick_getI();
+	scheduler.running->state = OS_SUSPENDED;
+	scheduler.running->suspended_timer = *last_wake - time + delay;
+	*last_wake = time;
+	os_system_reschedule();
+}
+
+
+
+/* os_event */
+
+void os_event_take(os_event_t event) {
+	return;
+}
+
+void os_event_give(os_event_t event) {
+	return;
+}
+
 
 /* END */

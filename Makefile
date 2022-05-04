@@ -13,7 +13,7 @@ MCU=atmega328p
 
 CPU_FREQ=16000000UL
 
-OPT=0
+OPT=s
 
 FORMAT=ihex
 

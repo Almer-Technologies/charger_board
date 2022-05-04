@@ -24,11 +24,12 @@
 #define _IO_BYTE(mem_addr) 	(*(volatile uint8_t *)(mem_addr))
 #define _MMIO_BYTE(mem_addr) 	(*(volatile uint8_t *)(mem_addr))
 
-
+#define NULL (void*) 0
 
 /**********************
  * DEFINITIONS
  **********************/
+
 
 
 //memory mapped general purpose registers

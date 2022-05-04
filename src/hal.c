@@ -200,6 +200,10 @@ hal_systick_t hal_systick_get(void) {
 	return shadow;
 }
 
+hal_systick_t hal_systick_getI(void) {
+	return system_tick;
+}
+
 
 
 

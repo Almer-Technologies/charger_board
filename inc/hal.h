@@ -30,7 +30,7 @@
 #define HAL_GPIO_IN     0
 
 
-#define NULL (void*) 0
+
 
 
 /**********************
@@ -64,6 +64,11 @@
 #define hal_gpio_tgl(port, pin) \
     _IO_BYTE((port)+GPIO_PORTx) ^= (pin)
 
+
+/* hal_utils */
+
+#define hal_print(string) \
+    hal_uart_send(string, sizeof(string));
 
 
 /**********************
@@ -99,6 +104,7 @@ void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void));
 /* hal systick */
 void hal_systick_init(void);
 hal_systick_t hal_systick_get(void);
+hal_systick_t hal_systick_getI(void);
 
 
 

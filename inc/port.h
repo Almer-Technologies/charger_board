@@ -73,7 +73,7 @@ typedef struct port_context {
  * except the stack pointer
  */
 
-static inline void port_store_context(port_context_t* ctx) {
+static inline void port_context_store(port_context_t* ctx) {
      // Save context
      asm volatile ( "push   r0             \n\t"    // r0
 		    "in     r0, __SREG__   \n\t"
@@ -117,7 +117,7 @@ static inline void port_store_context(port_context_t* ctx) {
 
 }
 
-static inline void port_restore_context(port_context_t* ctx) {
+static inline void port_context_restore(port_context_t* ctx) {
     //restore stack
     asm volatile (  "out    __SP_L__, %0   \n\t"
 		    "out    __SP_H__, %1   \n\t"
@@ -158,7 +158,7 @@ static inline void port_restore_context(port_context_t* ctx) {
 		    ::"r"(ctx->spl), "r"(ctx->sph));
 }
 
-static inline void port_create_context(port_context_t* ctx) {
+static inline void port_context_create(port_context_t* ctx) {
 
     //create context
     volatile uint8_t pcl = (uint8_t) ctx->entry;

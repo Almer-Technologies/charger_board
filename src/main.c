@@ -64,18 +64,30 @@ void cb(void) {
 
 int main(void) {
 
-	static os_thread_t thread_a, thread_b;
-	static uint8_t stack_a[512];
-	static uint8_t stack_b[512];
 
-	//os_thread_createI(&thread_a, 1, thread_a_entry, stack_a, 1024);	
-	//os_thread_createI(&thread_b, 2, thread_b_entry, stack_b, 1024);
 	
 	hal_systick_init();
 	hal_uart_init();
-	static const uint8_t  start[] = "start\n\r"; 
-	static const uint16_t start_len = sizeof(start); 
-	hal_uart_send(start, start_len);
+
+	hal_print("hal initialized!\n\r")
+
+	os_system_init();
+
+	static os_thread_t thread_a = {
+		.name = "thread_a"
+	};
+	static os_thread_t thread_b = {
+		.name = "thread_b"
+	};
+	static uint8_t stack_a[256];
+	static uint8_t stack_b[256];
+
+
+
+	os_thread_createI(&thread_a, 3, thread_a_entry, stack_a, 256);	
+	os_thread_createI(&thread_b, 2, thread_b_entry, stack_b, 256);
+
+	os_thread_list();
 
 	hal_gpio_init_out(GPIOD, PIN2|PIN3);
 	hal_gpio_init_out(GPIOB, PIN5);

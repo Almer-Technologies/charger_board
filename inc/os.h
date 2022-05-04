@@ -18,10 +18,13 @@
 #include <stdint.h>
 
 #include "port.h"
+#include "hal.h"
 
 /**********************
  *  CONSTANTS
  **********************/
+
+#define OS_THREAD_NAME_LEN	8
 
 
 /**********************
@@ -49,17 +52,21 @@ typedef uint8_t os_priority_t;
 
 typedef struct os_thread os_thread_t;
 
-typedef struct os_event {
+typedef struct os_event os_event_t;
+
+struct os_event {
 	uint8_t dummy;
-}os_event_t;
+};
 
 struct os_thread {
+	uint8_t name[OS_THREAD_NAME_LEN];
 	os_thread_t * next;
 	os_priority_t priority;
 	port_context_t context;
 	os_thread_state_t state;
 	hal_systick_t suspended_timer;
 	os_event_t * waiting_event;
+	uint8_t existing;
 };
 
 /**********************
@@ -87,6 +94,23 @@ void os_thread_createI( os_thread_t * thd,
 			void (*entry)(void), 
 			uint8_t * stack, 
 			uint16_t stack_size);
+
+void os_thread_list(void);
+
+
+/* os_delay */
+
+void os_delay(hal_systick_t delay);
+
+void os_delay_windowed(hal_systick_t * last_wake, hal_systick_t delay);
+
+
+
+/* os_event */
+
+void os_event_take(os_event_t event);
+
+void os_event_give(os_event_t event);
 
 
 #endif /* OS_H */
