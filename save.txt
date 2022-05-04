@@ -1,54 +1,3 @@
-/*  Title       : port
- *  Filename    : port.h
- *  Author      : iacopo sprenger
- *  Date        : 29.04.2022
- *  Version     : 0.1
- *  Description : operating system port for atmega328p
- */
-
-#ifndef PORT_H
-#define PORT_H
-
-
-
-
-/**********************
- *  INCLUDES
- **********************/
-
-#include <stdint.h>
-
-#include "atmega328p.h"
-
-/**********************
- *  CONSTANTS
- **********************/
-
-
-/**********************
- *  MACROS
- **********************/
-
-#define cli() \
-    asm volatile ("cli"::)
-
-
-#define sei() \
-    asm volatile ("sei"::)
-
-#define reti() \
-    asm volatile ("reti"::)
-
-#define ret() \
-    asm volatile ("ret"::)
-
-#define nop() \
-    asm volatile ("nop"::)
-
-
-
-
-
 #define port_context_save(ctx) 		\
     asm volatile (			\
     	"push	r0 		\n\t"	\
@@ -100,9 +49,13 @@
 
 
 #define port_context_create(ctx)			\
+    volatile uint8_t pcl = (uint8_t) (ctx)->entry;	\
+    volatile uint8_t pch = (uint8_t) (ctx)->entry>>8;	\
+    (ctx)->spl = (uint8_t) (ctx)->stack_top;		\
+    (ctx)->sph = (uint8_t) (ctx)->stack_top<<8;		\
     asm volatile (  					\
-    	"out    __SP_L__, %0   \n\t"/* set spl		*/\
-	"out    __SP_H__, %1   \n\t"/* set sph		*/\
+    	"out    __SP_L__, %0   \n\t"/* set sp		*/\
+	"out    __SP_H__, %1   \n\t"/* set sp		*/\
 	"push   %2             \n\t"/* set pcl		*/\
 	"push   %3             \n\t"/* set pch		*/\
 	"clr    r0             \n\t"/* 			*/\
@@ -142,7 +95,7 @@
 	"push   r0             \n\t"/*	r29		*/\
 	"push   r0             \n\t"/*	r30		*/\
 	"push   r0             \n\t"/*	r31		*/\
-	::"r"((ctx)->spl), "r"((ctx)->sph), "r"((ctx)->pcl), "r"((ctx)->pch))
+	::"r"((ctx)->spl), "r"((ctx)->sph), "r"(pcl), "r"(pch))
 
 #define port_context_return()		\
     asm volatile (			\
@@ -183,41 +136,3 @@
 	"reti		       \n\t"	\
 	::)
 
-
-
-/**********************
- *  TYPEDEFS
- **********************/
-
-typedef struct port_context {
-    uint8_t spl;
-    uint8_t sph;
-    void * entry;
-    uint8_t * stack_top;     
-    uint8_t pcl;
-    uint8_t pch;           
-}port_context_t;
-
-
-/**********************
- *  VARIABLES
- **********************/
-
-
-/**********************
- *  PROTOTYPES
- **********************/
-
-static inline void port_context_init(port_context_t* ctx, void (*entry)(void), uint8_t * stack, uint16_t stack_size) {
-	ctx->stack_top = &(stack[stack_size-1]); //get last element of stack
-	ctx->entry = (void*) entry;
-	ctx->pcl = (uint8_t) ((uint16_t) entry);
-	ctx->pch = (uint8_t) ((uint16_t) entry >> 8);
-	ctx->spl = (uint8_t) ((uint16_t) ctx->stack_top);
-	ctx->sph = (uint8_t) ((uint16_t) ctx->stack_top >> 8);
-}
-
-
-#endif /* PORT_H */
-
-/* END */

@@ -48,11 +48,15 @@
 
 
 void thread_a_entry(void) {
-
+	for(;;) {
+		hal_print("thread a\n\r");
+	}
 }
 
 void thread_b_entry(void) {
-
+	for(;;) {
+		hal_print("thread b\n\r");
+	}
 }
 
 void cb(void) {
@@ -85,7 +89,7 @@ int main(void) {
 
 
 	os_thread_createI(&thread_a, 3, thread_a_entry, stack_a, 256);	
-	os_thread_createI(&thread_b, 2, thread_b_entry, stack_b, 256);
+	os_thread_createI(&thread_b, 4, thread_b_entry, stack_b, 256);
 
 	os_thread_list();
 
@@ -94,8 +98,7 @@ int main(void) {
 
 	hal_gpio_clr(GPIOB, PIN5);
 
-	sei();
-	//os_system_init();
+	os_system_start();
 
 
 
