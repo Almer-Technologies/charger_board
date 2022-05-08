@@ -17,6 +17,15 @@
 
 #include <stdint.h>
 
+
+#define INFO	0
+#define VERBOSE 1
+
+
+
+#define DEBUG INFO
+
+
 /**********************
  *  TYPES
  **********************/
@@ -24,28 +33,29 @@
 #define _IO_BYTE(mem_addr) 	(*(volatile uint8_t *)(mem_addr))
 #define _MMIO_BYTE(mem_addr) 	(*(volatile uint8_t *)(mem_addr))
 
-
+#define NULL (void*) 0
 
 /**********************
  * DEFINITIONS
  **********************/
 
 
+
 //memory mapped general purpose registers
 
 
-#define GPIO_PINx	0U
-#define GPIO_DDRx	1U
-#define GPIO_PORTx	2U
+#define GPIO_PINx	(0)
+#define GPIO_DDRx	(1)
+#define GPIO_PORTx	(2)
 
-#define PIN0		1<<0U
-#define PIN1		1<<1U
-#define PIN2		1<<2U
-#define PIN3		1<<3U
-#define PIN4		1<<4U
-#define PIN5		1<<5U
-#define PIN6		1<<6U
-#define PIN7		1<<7U
+#define GPIO_PIN0		(1<<0)
+#define GPIO_PIN1		(1<<1)
+#define GPIO_PIN2		(1<<2)
+#define GPIO_PIN3		(1<<3)
+#define GPIO_PIN4		(1<<4)
+#define GPIO_PIN5		(1<<5)
+#define GPIO_PIN6		(1<<6)
+#define GPIO_PIN7		(1<<7)
 
 /* GPIOB */
 #define GPIOB	0x23
@@ -186,6 +196,10 @@
 #define UPMx1   5U
 #define UMSELx0 6U
 #define UMSELx1 7U
+
+/* SMCR */
+
+#define SMCR_SE	0U
 
 #endif /* ATMEGA328P_H */
 

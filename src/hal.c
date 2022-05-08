@@ -11,6 +11,7 @@
  **********************/
 
 #include "hal.h"
+#include <avr/interrupt.h>
 
 /**********************
  *	CONSTANTS
@@ -22,18 +23,22 @@
  **********************/
 
 
+
 /**********************
  *	TYPEDEFS
  **********************/
 
 typedef struct hal_uart {
-	uint8_t busy:1;
+	uint8_t tx_busy:1;
+	uint8_t rx_busy:1;
 	uint16_t tx_len;
 	uint16_t rx_len;
 	uint16_t tx_data_p;
 	uint16_t rx_data_p;
 	uint8_t * tx_data;
 	uint8_t * rx_data;
+	void (*tx_cmplt)(void);
+	void (*rx_cmplt)(void);
 }hal_uart_t;
 
 
@@ -61,8 +66,11 @@ static hal_systick_t system_tick;
 void hal_delay(uint32_t delay_ms) {
 	hal_systick_t time = hal_systick_get();
 
-	while(0 < 5000);
-	//while((hal_systick_get()) < (delay_ms+time));
+	while((hal_systick_get()) < (delay_ms+time));
+}
+
+void hal_sleep_idle(void) {
+	
 }
 
 
@@ -71,7 +79,8 @@ void hal_delay(uint32_t delay_ms) {
 
 void hal_uart_init(void) {
 
-	uart.busy = 0;
+	uart.tx_busy = 0;
+	uart.rx_busy = 0;
 
 	uint16_t ubrr = 8; //115200 baud
 
@@ -93,10 +102,10 @@ void hal_uart_send_char(uint8_t data) {
 }
 
 void hal_uart_send(uint8_t * data, uint16_t len) {
-	if(uart.busy) {
+	if(uart.tx_busy) {
 		return;
 	}
-	uart.busy = 1;
+	uart.tx_busy = 1;
 	uart.tx_len = len;
 	uart.tx_data = data;
 	uart.tx_data_p = 0;
@@ -106,32 +115,62 @@ void hal_uart_send(uint8_t * data, uint16_t len) {
 	}
 	while (!(UCSR0A & (1<<TXCx))); //wait for end of data transmission
 	UCSR0A |= (1<<TXCx);
-	uart.busy = 0;
+	uart.tx_busy = 0;
 }
 
-void hal_uart_send_it(uint8_t * data, uint16_t len) {
-	if(uart.busy) {
+void hal_uart_send_it(uint8_t * data, uint16_t len, void (*tx_cmplt)(void)) {
+	if(uart.tx_busy) {
 		return;
 	}
-	uart.busy = 1;
+	uart.tx_busy = 1;
 	uart.tx_len = len;
 	uart.tx_data = data;
 	uart.tx_data_p = 0;
-	UCSR0B |= 1<<UDRIEx; //enable DRE interrupt
-	//send first byte
-	//while (!(UCSR0A & (1<<UDREx)));
+	uart.tx_cmplt = tx_cmplt;
+	//send first bit
 	UDR0 = (uint8_t) (uart.tx_data[uart.tx_data_p++]);
+	//enable interrupt
+	UCSR0B |= 1<<UDRIEx; //enable DRE interrupt
 }
 
 uint8_t hal_uart_recv_char(void) {
-	while (!(UCSR0A & (1<<RXCx))); //wait prev data to be transmitted
+	while (!(UCSR0A & (1<<RXCx))); //wait for char to arrive
 	return UDR0;
+}
+
+void hal_uart_recv(uint8_t * data, uint16_t len) {
+	if(uart.rx_busy) {
+		return;
+	}
+	uart.rx_busy = 1;
+	uart.rx_len = len;
+	uart.rx_data = data;
+	uart.rx_data_p = 0;
+	while(uart.rx_data_p < uart.rx_len) {
+		while(!(UCSR0A & (1<<RXCx))); //wait for char to arrive
+		uart.rx_data[uart.rx_data_p++] = UDR0;
+	}
+	uart.rx_busy = 0;
+}
+
+void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void)) {
+	if(uart.rx_busy) {
+		return;
+	}
+	uart.rx_busy = 1;
+	uart.rx_len = len;
+	uart.rx_data = data;
+	uart.rx_data_p = 0;
+	uart.rx_cmplt = rx_cmplt;
+
+	//enable uart rx interrupt
+	UCSR0B |= 1<<RXCIEx; 
 }
 
 
 /* hal systick */
 
-void hal_systick_init(void) {
+void hal_systick_init() {
 
 	system_tick = 0;
 
@@ -149,9 +188,7 @@ void hal_systick_init(void) {
 	TIMSK0 = 1<<OCIExA; //enable compare A interrupt
 }
 
-void hal_systick_inc(void) {
-	system_tick++;
-}
+
 
 /**
  * 	returns system time in tick (usually ms)
@@ -165,6 +202,13 @@ hal_systick_t hal_systick_get(void) {
 	return shadow;
 }
 
+hal_systick_t hal_systick_getI(void) {
+	return system_tick;
+}
+
+void hal_systick_inc(void) {
+	system_tick++;
+}
 
 
 
@@ -173,26 +217,45 @@ hal_systick_t hal_systick_get(void) {
  **********************/
 
 
-void __attribute__((signal)) timer0_compa_int(void) {
-
-	hal_systick_inc();
-	//hal_gpio_tgl(GPIOB, PIN5);
-
-}
 
 
-void __attribute__((signal)) usart_dre_int(void) {
+
+ISR(USART_UDRE_vect) {
 	//ready to send next byte
 	if((uart.tx_data_p < uart.tx_len)) {
 		UDR0 = (uint8_t) (uart.tx_data[uart.tx_data_p++]);
+		
 	} else {
-		PORTB = 0;
-		//disable interrupt for uart
-		UCSR0B &= ~(1<<UDRIEx);
-		UCSR0A |= (1<<TXCx);
-		uart.busy = 0;
-	}
 
+		//disable interrupt for uart DRE
+		UCSR0B &= ~(1<<UDRIEx);
+		//enable TXC interrupt
+		UCSR0A |= (1<<TXCx);
+		UCSR0B |= 1<<TXCIEx;
+	}
+}
+
+ISR(USART_TX_vect) {
+	//transmission complete
+	UCSR0A |= (1<<TXCx);
+	UCSR0B &= ~(1<<TXCIEx);
+	uart.tx_busy = 0;
+	if(uart.tx_cmplt) {
+		uart.tx_cmplt();
+	}
+}
+
+ISR(USART_RX_vect) {
+	//transmission complete
+	uart.rx_data[uart.rx_data_p++] = UDR0;
+	if(uart.rx_data_p >= uart.rx_len) {
+		UCSR0B &= ~(1<<RXCIEx);
+		uart.rx_busy = 0;
+		if(uart.rx_cmplt) {
+			uart.rx_cmplt();
+		}
+	}
+	
 }
 
 /* END */

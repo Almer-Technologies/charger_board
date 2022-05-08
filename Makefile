@@ -17,9 +17,9 @@ OPT=s
 
 FORMAT=ihex
 
-DEBUG_LEVEL=-g
+DEBUG_LEVEL=
 
-WARNINGS=-Wall #-Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
+WARNINGS=#-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
 
@@ -60,7 +60,7 @@ AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 115200
 
 
 CFLAGS=-O$(OPT) $(DEBUG_LEVEL) -DF_CPU=$(CPU_FREQ) -mmcu=$(MCU)\
-$(WARNINGS) -nostartfiles
+$(WARNINGS)
 
 
 
@@ -76,30 +76,40 @@ OBJECTS += $(patsubst $(SOURCEDIR)/%.c, $(BUILDDIR)/%.o, $(CSOURCES))
  
 CURR_DIR = $(notdir $(shell pwd))
 
+COLOR_START="\x1b[1;34m"
+COLOR_STOP="\x1b[0m"
+SAY_BUILD=${COLOR_START}"[build]"${COLOR_STOP}
 
-all: clean $(TARGET).elf $(TARGET).hex $(TARGET).lst
+
+all: clean $(TARGET).elf $(TARGET).hex $(TARGET).lst size
 
 $(TARGET).elf: $(OBJECTS)
-	@echo "[build] compiling elf file: " $^
+	@/bin/echo -e ${SAY_BUILD}" compiling elf file: " $^
 	${CC} -mmcu=${MCU} $(CFLAGS) -o $@ $^
 
 
+
+size: $(TARGET).elf
+	@/bin/echo -e ${SAY_BUILD}" final size: "
+	${SIZE} $<
+
+
 %.hex: %.elf
-	@echo "[build] copying binary: " $<
+	@/bin/echo -e ${SAY_BUILD}" copying binary: " $<
 	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
 
 %.lst: %.elf
-	@echo "[build] dumping listing: " $<
+	@/bin/echo -e ${SAY_BUILD}" dumping listing: " $<
 	$(OBJDUMP) -h -S $< > $@
 
 # Compile: create object files from C source files.
 $(BUILDDIR)/%.o : $(SOURCEDIR)/%.c
-	@echo "[build] compiling objects from c source: " $<
+	@/bin/echo -e ${SAY_BUILD}" compiling objects from c source: " $<
 	$(CC) -c -I$(HEADERDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
 
 # Assemble: create object files from assembler source files.
 $(BUILDDIR)/%.o : $(SOURCEDIR)/%.s
-	@echo "[build] compiling objects from s source: " $<
+	@/bin/echo -e ${SAY_BUILD}" compiling objects from s source: " $<
 	$(CC) -c -I$(HEADERDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
 
 clean:
