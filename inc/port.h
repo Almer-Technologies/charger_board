@@ -86,7 +86,8 @@
     	"push	r28		\n\t"	\
     	"push	r29 		\n\t"	\
     	"push	r30 		\n\t"	\
-    	"push	r31		\n\t"	\
+    	"push	r31		\n\t");	\
+    asm volatile (			\
     	"in	%0, __SP_L__	\n\t"	\
     	"in	%1, __SP_H__	\n\t"	\
     	:"=r"((ctx)->spl), "=r"((ctx)->sph))

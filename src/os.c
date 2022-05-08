@@ -14,6 +14,8 @@
 #include "port.h"
 #include "hal.h"
 
+#include <avr/interrupt.h>
+
 /**********************
  *	CONSTANTS
  **********************/
@@ -45,7 +47,7 @@ typedef struct os_scheduler {
  *	VARIABLES
  **********************/
 
-static os_scheduler_t scheduler;
+static volatile os_scheduler_t scheduler;
 
 static os_thread_t idle_thread = {
 	.name="idle_thd"
@@ -63,6 +65,8 @@ void os_scheduler_add_thread(	os_scheduler_t * sch,
 
 void os_scheduler_add_threadI(	os_scheduler_t * sch,
 				os_thread_t * thd);
+
+void os_thread_print(os_thread_t * thd);
 
 os_thread_t * os_scheduler_get_ready(os_scheduler_t * sch);
 
@@ -117,11 +121,35 @@ void os_thread_list(void) {
 	hal_print("threads list\n\r");
 	os_thread_t * node;
 	for( node = scheduler.head; node != NULL; node = node->next) {
-		hal_print(node->name);
-		hal_print(" ");
-		hal_uart_send_char('0'+node->priority);
-		hal_print("\r\n");
+		os_thread_print(node);
 	}	
+}
+
+
+void os_thread_print(os_thread_t * thd) {
+	hal_print(thd->name);
+	hal_uart_send_char(' ');
+	hal_uart_send_char('0'+thd->priority);
+	hal_uart_send_char(' ');
+	switch(thd->state) {
+		case OS_RUNNING:
+			hal_uart_send_char('X');
+			break;
+		case OS_READY:
+			hal_uart_send_char('R');
+			break;
+		case OS_SUSPENDED:
+			hal_uart_send_char('S');
+			break;
+		case OS_WAITING:
+			hal_uart_send_char('W');
+			break;
+		case OS_DISABLED:
+			hal_uart_send_char('D');
+			break;
+	}
+	hal_uart_send_char('\n');
+	hal_uart_send_char('\r');
 }
 
 
@@ -183,7 +211,9 @@ os_thread_t * os_scheduler_get_ready(os_scheduler_t * sch) {
 void os_system_idle(void) {
 	for(;;) {
 		//should enter idle
-		hal_print("idle\n\r");
+		//hal_print("idle\n\r");
+		//hal_gpio_tgl(GPIOD, GPIO_PIN4);
+		hal_sleep_enter();
 	}
 }
 
@@ -209,56 +239,52 @@ void os_system_init(void) {
 
 //give control to scheduler
 void os_system_start(void) {
-
-
-	
+#if DEBUG == VERBOSE
+	hal_print("starting system\n\r");
+#endif
 
 	scheduler.running = os_scheduler_get_ready(&scheduler);
 
+
 	scheduler.running->state = OS_RUNNING;
 	scheduler.running->existing = 1;
-	
+
+	//hal_print("running thread: ");
+	//os_thread_print(scheduler.running);
+#if DEBUG == VERBOSE
+	hal_print("first state:\n\r");
+	os_thread_list();
+#endif
 	port_context_create(&(scheduler.running->context));
 	port_context_return();
-
-	os_system_panic("outside");
 }
 
 void os_system_panic(const uint8_t * msg) {
 	cli();
-	while(1) {
-		hal_uart_send("PANIC  ", 7);
-		hal_uart_send(msg, sizeof(msg));
-		hal_uart_send("\n\r", 2);
+	hal_uart_send("PANIC  ", 7);
+	hal_uart_send(msg, sizeof(msg));
+	hal_uart_send("\n\r", 2);
+	while(1) {	
 
 	}
 }
 
-//reschedule system
+//reschedule system assuming no threads are running
 void os_system_reschedule(void) {
+#if DEBUG == VERBOSE
+	hal_print("reschedule requested\n\r");
+	os_thread_list();
+#endif
+	scheduler.running = os_scheduler_get_ready(&scheduler);
 
-	os_thread_t * old = scheduler.running;
-	//run scheduler
-	os_thread_t * new = os_scheduler_get_ready(&scheduler);
+	scheduler.running->state = OS_RUNNING;
 
-	if(new == scheduler.running) {
-		return;
-	} else {
-		os_system_switch(old, new);
-	}
+#if DEBUG == VERBOSE
+	hal_print("new states \n\r");
+	os_thread_list();
+#endif
 }
 
-//switch context
-void os_system_switch(os_thread_t * old, os_thread_t * new) {
-	port_context_save(&old->context);
-	if(!(new->existing)) {
-		new->existing = 1;
-		port_context_create(&new->context);
-	} else {
-		port_context_restore(&new->context);
-	}
-	port_context_return();
-}
 
 
 /* os_delay */
@@ -271,23 +297,54 @@ void os_delay_compute(void){
 			node->suspended_timer--; //remove 1ms from suspended timer
 			if(node->suspended_timer == 0) {
 				node->state = OS_READY;
+				scheduler.running->state = OS_READY;
+				os_system_reschedule();
 			}
 		}
 	}
 }
 
 void os_delay(hal_systick_t delay) {
+	port_context_save(&(scheduler.running->context));
 	scheduler.running->state = OS_SUSPENDED;
 	scheduler.running->suspended_timer = delay;
 	os_system_reschedule();
+#if DEBUG == VERBOSE
+	hal_print("resched for delay: \n\r");
+	os_thread_list();
+#endif
+	if(!(scheduler.running->existing)) {
+		scheduler.running->existing = 1;
+		port_context_create(&scheduler.running->context);
+	} else {
+		port_context_restore(&scheduler.running->context);
+	}
+	port_context_return();
 }
 
 void os_delay_windowed(hal_systick_t * last_wake, hal_systick_t delay) {
-	hal_systick_t time = hal_systick_getI();
-	scheduler.running->state = OS_SUSPENDED;
-	scheduler.running->suspended_timer = *last_wake - time + delay;
-	*last_wake = time;
-	os_system_reschedule();
+	hal_systick_t time = hal_systick_get();
+	if(delay > (time - *last_wake)) {
+		os_delay(delay - (time - *last_wake));
+	} else {
+		os_delay(1);
+	}
+	*last_wake = hal_systick_get();
+}
+
+ISR(TIMER0_COMPA_vect, ISR_NAKED) {
+	port_context_save(&(scheduler.running->context));
+	hal_sleep_disable();
+	hal_systick_inc();
+	os_delay_compute();
+
+	if(!(scheduler.running->existing)) {
+		scheduler.running->existing = 1;
+		port_context_create(&scheduler.running->context);
+	} else {
+		port_context_restore(&scheduler.running->context);
+	}
+	port_context_return();
 }
 
 

@@ -25,6 +25,7 @@
  **********************/
 
 #define OS_THREAD_NAME_LEN	8
+#define OS_EVENT_NAME_LEN	8
 
 
 /**********************
@@ -36,13 +37,19 @@
  *  TYPEDEFS
  **********************/
 
-typedef enum os_thread_state{
+typedef enum os_thread_state {
 	OS_RUNNING,	//Thread is currently running
 	OS_READY,	//Thread is ready to run
 	OS_SUSPENDED,	//Thread is suspended (waiting on scheduled time)
 	OS_WAITING,	//Thread is waiting for an event
 	OS_DISABLED	//Thread is disabled
 }os_thread_state_t;
+
+typedef enum os_event_state {
+	OS_TAKEN,
+	OS_FREE
+
+}os_event_state_t;
 
 
 /**
@@ -55,12 +62,16 @@ typedef struct os_thread os_thread_t;
 typedef struct os_event os_event_t;
 
 struct os_event {
-	uint8_t dummy;
+	uint8_t name[OS_EVENT_NAME_LEN];
+	os_event_state_t state;
+	os_thread_t waiting;
+	os_thread_t owner;
 };
 
 struct os_thread {
 	uint8_t name[OS_THREAD_NAME_LEN];
 	os_thread_t * next;
+	os_thread_t * evt_next;
 	os_priority_t priority;
 	port_context_t context;
 	os_thread_state_t state;
@@ -100,7 +111,9 @@ void os_thread_list(void);
 
 /* os_delay */
 
-void os_delay(hal_systick_t delay);
+void os_delay_compute(void);
+
+void os_delay(hal_systick_t delay) __attribute__((naked));
 
 void os_delay_windowed(hal_systick_t * last_wake, hal_systick_t delay);
 
@@ -108,9 +121,9 @@ void os_delay_windowed(hal_systick_t * last_wake, hal_systick_t delay);
 
 /* os_event */
 
-void os_event_take(os_event_t event);
+void os_event_wait(os_event_t event);
 
-void os_event_give(os_event_t event);
+void os_event_notify(os_event_t event);
 
 
 #endif /* OS_H */

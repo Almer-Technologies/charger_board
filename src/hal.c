@@ -22,8 +22,6 @@
  *	MACROS
  **********************/
 
-#define hal_systick_inc() \
-	system_tick++
 
 
 /**********************
@@ -69,6 +67,10 @@ void hal_delay(uint32_t delay_ms) {
 	hal_systick_t time = hal_systick_get();
 
 	while((hal_systick_get()) < (delay_ms+time));
+}
+
+void hal_sleep_idle(void) {
+	
 }
 
 
@@ -168,7 +170,7 @@ void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void)) {
 
 /* hal systick */
 
-void hal_systick_init(void) {
+void hal_systick_init() {
 
 	system_tick = 0;
 
@@ -204,6 +206,9 @@ hal_systick_t hal_systick_getI(void) {
 	return system_tick;
 }
 
+void hal_systick_inc(void) {
+	system_tick++;
+}
 
 
 
@@ -212,9 +217,7 @@ hal_systick_t hal_systick_getI(void) {
  **********************/
 
 
-ISR(TIMER0_COMPA_vect) {
-	hal_systick_inc();
-}
+
 
 
 ISR(USART_UDRE_vect) {

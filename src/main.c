@@ -1,9 +1,9 @@
-/*  Title		: init
- *  Filename	: init.c
+/*  Title		: main
+ *  Filename	: main.c
  *	Author		: iacopo sprenger
  *	Date		: 29.04.2022
  *	Version		: 0.1
- *	Description	: processor initialization called from asembly setup
+ *	Description	: main program
  */
 
 /**********************
@@ -48,14 +48,28 @@
 
 
 void thread_a_entry(void) {
+	static hal_systick_t last_wake;
+	last_wake = hal_systick_get();
 	for(;;) {
-		hal_print("thread a\n\r");
+		
+		cli();
+		hal_gpio_tgl(GPIOD, GPIO_PIN2);
+		sei();
+
+		hal_delay(200);
+		//hal_print("thread a\n\r");
+		//hal_systick_t time = hal_systick_get();
+		os_delay_windowed(&last_wake, 1000);
 	}
 }
 
 void thread_b_entry(void) {
 	for(;;) {
-		hal_print("thread b\n\r");
+		cli();
+		hal_gpio_tgl(GPIOD, GPIO_PIN3);
+		sei();
+		//hal_print("thread b\n\r");
+		os_delay(1500);
 	}
 }
 
@@ -73,7 +87,7 @@ int main(void) {
 	hal_systick_init();
 	hal_uart_init();
 
-	hal_print("hal initialized!\n\r")
+	//hal_print("hal initialized!\n\r")
 
 	os_system_init();
 
@@ -88,35 +102,23 @@ int main(void) {
 
 
 
-	os_thread_createI(&thread_a, 3, thread_a_entry, stack_a, 256);	
-	os_thread_createI(&thread_b, 4, thread_b_entry, stack_b, 256);
+	os_thread_createI(&thread_a, 2, thread_a_entry, stack_a, 256);	
+	os_thread_createI(&thread_b, 1, thread_b_entry, stack_b, 256);
 
-	os_thread_list();
 
-	hal_gpio_init_out(GPIOD, PIN2|PIN3);
-	hal_gpio_init_out(GPIOB, PIN5);
+	hal_gpio_init_out(GPIOD, GPIO_PIN2|GPIO_PIN3|GPIO_PIN4);
+	hal_gpio_init_out(GPIOB, GPIO_PIN5);
 
-	hal_gpio_clr(GPIOB, PIN5);
+	hal_gpio_clr(GPIOB, GPIO_PIN5);
 
 	os_system_start();
 
 
-
-	//infinite loop lock
 	for(;;) {
 
-		static const uint8_t  message[] = "hello\n\r"; 
-		static const uint16_t message_len = sizeof(message);
-		uint8_t msg[7];
-		hal_uart_recv_it(msg, 7, cb);
-		hal_gpio_set(GPIOD, PIN2);
-		//hal_uart_send(message, message_len);
-		//hal_uart_send(msg, 7);
-		hal_gpio_clr(GPIOD, PIN2);
-
-		hal_delay(500);
-
 	}
+
+	os_system_panic("end");
 }
 
 
