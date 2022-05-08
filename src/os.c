@@ -72,8 +72,6 @@ os_thread_t * os_scheduler_get_ready(os_scheduler_t * sch);
 
 void os_system_switch(os_thread_t * old, os_thread_t * new);
 
-void os_system_panic(const uint8_t * msg);
-
 /**********************
  *	DECLARATIONS
  **********************/
@@ -351,13 +349,77 @@ ISR(TIMER0_COMPA_vect, ISR_NAKED) {
 
 /* os_event */
 
-void os_event_take(os_event_t event) {
-	return;
+
+
+void os_event_create(os_event_t * event, os_event_state_t state) {
+	event->state = state;
+	event->owner = NULL;
 }
 
-void os_event_give(os_event_t event) {
-	return;
+// puts the thread into waiting for event state
+void os_event_wait(os_event_t * event) {
+	port_context_save(&(scheduler.running->context));
+
+	scheduler.running->state = OS_WAITING;
+	scheduler.running->waiting_event = event;
+
+	os_system_reschedule();
+
+	if(!(scheduler.running->existing)) {
+		scheduler.running->existing = 1;
+		port_context_create(&scheduler.running->context);
+	} else {
+		port_context_restore(&scheduler.running->context);
+	}
+	port_context_return();
 }
+
+// puts all the waiting threads in ready state
+void os_event_signal(os_event_t * event) {
+	port_context_save(&(scheduler.running->context));
+
+	scheduler.running->state = OS_READY;
+	os_thread_t * node;
+	for( node = scheduler.head; node != NULL; node = node->next) {
+		if(node->state == OS_WAITING && node->waiting_event == event) {
+			node->state = OS_READY;
+		}
+	}
+
+	os_system_reschedule();
+
+	if(!(scheduler.running->existing)) {
+		scheduler.running->existing = 1;
+		port_context_create(&scheduler.running->context);
+	} else {
+		port_context_restore(&scheduler.running->context);
+	}
+	port_context_return();
+}
+
+// if the event is free, set it to taken
+// if the event is taken, wait for it to be free
+void os_event_take(os_event_t * event) {
+
+
+	if(event->state == OS_TAKEN) {
+		os_event_wait(event);
+	} else {
+		event->state = OS_TAKEN;
+		event->owner = scheduler.running;
+	}
+
+}
+
+// set the event to free if owned, otherwise do nothing
+// put all the waiting threads to ready state
+void os_event_release(os_event_t * event) {
+	if(event->owner == scheduler.running) {
+		event->state = OS_FREE;
+		os_event_signal(event);
+	}	
+}
+
 
 
 /* END */

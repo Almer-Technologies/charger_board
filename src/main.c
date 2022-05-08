@@ -33,6 +33,8 @@
  *	VARIABLES
  **********************/
 
+static os_event_t event_a;
+
 
 
 
@@ -47,6 +49,9 @@
 
 
 
+
+
+
 void thread_a_entry(void) {
 	static hal_systick_t last_wake;
 	last_wake = hal_systick_get();
@@ -56,20 +61,23 @@ void thread_a_entry(void) {
 		hal_gpio_tgl(GPIOD, GPIO_PIN2);
 		sei();
 
+		hal_print("thread a\n\r");
 		hal_delay(200);
-		//hal_print("thread a\n\r");
-		//hal_systick_t time = hal_systick_get();
+		os_event_signal(&event_a);
+
 		os_delay_windowed(&last_wake, 1000);
+
 	}
 }
 
 void thread_b_entry(void) {
 	for(;;) {
+		os_event_wait(&event_a);
 		cli();
 		hal_gpio_tgl(GPIOD, GPIO_PIN3);
 		sei();
-		//hal_print("thread b\n\r");
-		os_delay(1500);
+		hal_print("thread b\n\r");
+		//os_delay(1500);
 	}
 }
 
@@ -86,32 +94,39 @@ int main(void) {
 	
 	hal_systick_init();
 	hal_uart_init();
-
-	//hal_print("hal initialized!\n\r")
-
 	os_system_init();
 
+
+	/* hal initialization */
+	hal_gpio_init_out(GPIOD, GPIO_PIN2|GPIO_PIN3|GPIO_PIN4);
+	hal_gpio_init_out(GPIOB, GPIO_PIN5);
+
+	/* threads definitions */
 	static os_thread_t thread_a = {
 		.name = "thread_a"
 	};
 	static os_thread_t thread_b = {
 		.name = "thread_b"
 	};
+
+
 	static uint8_t stack_a[256];
 	static uint8_t stack_b[256];
 
 
-
+	/* threads creation */
 	os_thread_createI(&thread_a, 2, thread_a_entry, stack_a, 256);	
 	os_thread_createI(&thread_b, 1, thread_b_entry, stack_b, 256);
 
+	os_event_create(&event_a, OS_TAKEN);
 
-	hal_gpio_init_out(GPIOD, GPIO_PIN2|GPIO_PIN3|GPIO_PIN4);
-	hal_gpio_init_out(GPIOB, GPIO_PIN5);
 
-	hal_gpio_clr(GPIOB, GPIO_PIN5);
 
+
+
+	//execution is handed over to the scheduler
 	os_system_start();
+
 
 
 	for(;;) {

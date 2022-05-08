@@ -46,8 +46,8 @@ typedef enum os_thread_state {
 }os_thread_state_t;
 
 typedef enum os_event_state {
-	OS_TAKEN,
-	OS_FREE
+	OS_FREE,
+	OS_TAKEN
 
 }os_event_state_t;
 
@@ -64,14 +64,12 @@ typedef struct os_event os_event_t;
 struct os_event {
 	uint8_t name[OS_EVENT_NAME_LEN];
 	os_event_state_t state;
-	os_thread_t waiting;
-	os_thread_t owner;
+	os_thread_t * owner;
 };
 
 struct os_thread {
 	uint8_t name[OS_THREAD_NAME_LEN];
 	os_thread_t * next;
-	os_thread_t * evt_next;
 	os_priority_t priority;
 	port_context_t context;
 	os_thread_state_t state;
@@ -89,8 +87,12 @@ struct os_thread {
  *  PROTOTYPES
  **********************/
 
+/* os_system */
 void os_system_init(void);
 
+void os_system_panic(const uint8_t * msg);
+
+void os_system_start(void);
 
 
 /* os_thread */
@@ -121,10 +123,16 @@ void os_delay_windowed(hal_systick_t * last_wake, hal_systick_t delay);
 
 /* os_event */
 
-void os_event_wait(os_event_t event);
+void os_event_create(os_event_t * event, os_event_state_t state);
 
-void os_event_notify(os_event_t event);
+void os_event_wait(os_event_t * event) __attribute__((naked));
 
+void os_event_signal(os_event_t * event) __attribute__((naked));
+
+
+void os_event_take(os_event_t * event);
+
+void os_event_release(os_event_t * event);
 
 #endif /* OS_H */
 

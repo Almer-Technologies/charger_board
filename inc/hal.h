@@ -112,7 +112,7 @@ void hal_uart_recv(uint8_t * data, uint16_t len);
 void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void));
 
 /* hal systick */
-void hal_systick_init();
+void hal_systick_init(void);
 hal_systick_t hal_systick_get(void);
 hal_systick_t hal_systick_getI(void);
 void hal_systick_inc(void);
