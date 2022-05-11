@@ -17,7 +17,7 @@ OPT=s
 
 FORMAT=ihex
 
-DEBUG_LEVEL=
+DEBUG_LEVEL=# -g #-DGDB
 
 WARNINGS=#-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
@@ -28,6 +28,10 @@ WARNINGS=#-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-alig
 SHELL = sh
 
 CC = $(TOOLCHAIN)/avr-gcc
+
+GDB = $(TOOLCHAIN)/avr-gdb 
+
+SIMULATOR = simulavr
 
 OBJCOPY = $(TOOLCHAIN)/avr-objcopy
 OBJDUMP = $(TOOLCHAIN)/avr-objdump
@@ -68,9 +72,11 @@ $(WARNINGS)
 BUILDDIR = build
 SOURCEDIR = src
 HEADERDIR = inc
+DEBUGDIR = debug
 
 ASOURCES = $(wildcard $(SOURCEDIR)/*.s)
 CSOURCES = $(wildcard $(SOURCEDIR)/*.c)
+#CSOURCES += $(wildcard $(DEBUGDIR)/*.c)
 OBJECTS =  $(patsubst $(SOURCEDIR)/%.s, $(BUILDDIR)/%.o, $(ASOURCES))
 OBJECTS += $(patsubst $(SOURCEDIR)/%.c, $(BUILDDIR)/%.o, $(CSOURCES)) 
  
@@ -105,12 +111,12 @@ size: $(TARGET).elf
 # Compile: create object files from C source files.
 $(BUILDDIR)/%.o : $(SOURCEDIR)/%.c
 	@/bin/echo -e ${SAY_BUILD}" compiling objects from c source: " $<
-	$(CC) -c -I$(HEADERDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
+	$(CC) -c -I$(HEADERDIR) -I$(DEBUGDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
 
 # Assemble: create object files from assembler source files.
 $(BUILDDIR)/%.o : $(SOURCEDIR)/%.s
 	@/bin/echo -e ${SAY_BUILD}" compiling objects from s source: " $<
-	$(CC) -c -I$(HEADERDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
+	$(CC) -c -I$(HEADERDIR) -I$(DEBUGDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
 
 clean:
 	$(REMOVE) build/*
@@ -120,3 +126,10 @@ program: clean $(TARGET).elf $(TARGET).hex $(TARGET).lst
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
 
 
+
+simulate: clean $(TARGET).elf $(TARGET).hex $(TARGET).lst 
+	$(SIMULATOR) -f $(TARGET).elf -d atmega328 -g 
+
+
+debugger:
+	ddd --debugger "$(GDB)"

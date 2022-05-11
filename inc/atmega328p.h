@@ -130,19 +130,66 @@
 
 #define PRR     _MMIO_BYTE(0x64)
 
+#define OSCCAL	_MMIO_BYTE(0x66)
+#define PCICR	_MMIO_BYTE(0x68)
+#define EICRA	_MMIO_BYTE(0x69)
+
+#define PCMSK0	_MMIO_BYTE(0x6B)
+#define PCMSK1	_MMIO_BYTE(0x6C)
+#define PCMSK2	_MMIO_BYTE(0x6D)
+
 
 #define TIMSK0  _MMIO_BYTE(0x6E)
+#define TIMSK1	_MMIO_BYTE(0x6F)
+#define TIMSK2	_MMIO_BYTE(0x70)
 
 
+#define ADCL	_MMIO_BYTE(0x78)
+#define ADCH	_MMIO_BYTE(0x79)
+#define ADCSRA	_MMIO_BYTE(0x7A)
+#define ADCSRB	_MMIO_BYTE(0x7B)
+#define ADMUX	_MMIO_BYTE(0x7C)
+#define DIDR0	_MMIO_BYTE(0x7E)
+#define DIDR1	_MMIO_BYTE(0x7F)
 
 
-/* usart */
+#define TCCR1A	_MMIO_BYTE(0x80)
+#define TCCR1B	_MMIO_BYTE(0x81)
+#define TCCR1C	_MMIO_BYTE(0x82)
+#define TCNT1L	_MMIO_BYTE(0x84)
+#define TCNT1H	_MMIO_BYTE(0x85)
+#define ICR1L	_MMIO_BYTE(0x86)
+#define ICR1H	_MMIO_BYTE(0x87)
+#define OCR1AL	_MMIO_BYTE(0x88)
+#define OCR1AH	_MMIO_BYTE(0x89)
+#define OCR1BL	_MMIO_BYTE(0x8A)
+#define OCR1BH	_MMIO_BYTE(0x8B)
+
+#define TCCR2A	_MMIO_BYTE(0xB0)
+#define TCCR2B	_MMIO_BYTE(0xB1)
+#define TCNT2	_MMIO_BYTE(0xB2)
+#define OCR2A	_MMIO_BYTE(0xB3)
+#define OCR2B	_MMIO_BYTE(0xB4)
+
+#define ASSR	_MMIO_BYTE(0xB6)
+
+/* i2c */
+#define TWBR	_MMIO_BYTE(0xB8)
+#define TWSR	_MMIO_BYTE(0xB9)
+#define TWAR	_MMIO_BYTE(0xBA)
+#define TWDR	_MMIO_BYTE(0xBB)
+#define TWCR	_MMIO_BYTE(0xBC)
+#define TWAMR	_MMIO_BYTE(0xBD)
+
+/* uart */
 #define UCSR0A	_MMIO_BYTE(0xC0)
 #define UCSR0B  _MMIO_BYTE(0xC1)
 #define UCSR0C  _MMIO_BYTE(0xC2)
 #define UBRR0L  _MMIO_BYTE(0xC4)
 #define UBRR0H  _MMIO_BYTE(0xC5)
 #define UDR0    _MMIO_BYTE(0xC6)
+
+
 
 
 
@@ -196,6 +243,52 @@
 #define UPMx1   5U
 #define UMSELx0 6U
 #define UMSELx1 7U
+
+/* spi */
+#define SPR0	0U
+#define SPR1	1U
+#define CPHA	2U
+#define CPOL	3U
+#define MSTR	4U
+#define DORD	5U
+#define SPE	    6U
+#define SPIE	7U
+
+#define SPI2X	0U
+#define WCOL	6U
+#define SPIF	7U
+
+
+/* i2c */
+#define TWIE	0U
+#define TWEN	2U
+#define TWWC	3U
+#define TWSTO	4U
+#define TWSTA	5U
+#define TWEA	6U
+#define TWINT	7U
+
+#define	TWPS0	0U
+#define TWPS1	1U
+#define TWS3	3U
+#define TWS4	4U
+#define TWS5	5U
+#define TWS6	6U
+#define TWS7	7U
+
+#define TW_START		    0x08
+#define TW_RSTART		    0x10
+#define TW_MT_SLA_ACK	    0x18
+#define TW_MT_SLA_NACK	    0x20
+#define TW_MT_DATA_ACK	    0x28
+#define TW_MT_DATA_NACK	    0x30
+#define TW_LOST		        0x38
+
+
+
+
+
+
 
 /* SMCR */
 

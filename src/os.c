@@ -10,9 +10,9 @@
  *	INCLUDES
  **********************/
 
-#include "os.h"
-#include "port.h"
-#include "hal.h"
+#include <os.h>
+#include <port.h>
+#include <hal.h>
 
 #include <avr/interrupt.h>
 

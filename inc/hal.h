@@ -40,17 +40,14 @@
 /* hal gpio */
 
 #define hal_gpio_init_out(port, pins) \
-    _IO_BYTE((port)+GPIO_DDRx) |= (pins); \
-    nop()
+    _IO_BYTE((port)+GPIO_DDRx) |= (pins)
 
 #define hal_gpio_init_in(port, pins) \
-    _IO_BYTE((port)+GPIO_DDRx) &= ~(pins); \
-    nop()
+    _IO_BYTE((port)+GPIO_DDRx) &= ~(pins)
 
 #define hal_gpio_init_in_pup(port, pins) \
     _IO_BYTE((port)+GPIO_DDRx) &= ~(pins); \
-    _IO_BYTE((port)+GPIO_PORTx) |= (pins); \
-    nop()
+    _IO_BYTE((port)+GPIO_PORTx) |= (pins)
 
 #define hal_gpio_get(port, pin) \
     _IO_BYTE((port)+GPIO_PINx) & (pin) ? 1 : 0
@@ -88,6 +85,11 @@
 
 typedef uint32_t hal_systick_t;
 
+typedef enum i2c_dir {
+    HAL_I2C_READ = 0x0,
+    HAL_I2C_WRITE = 0x1,
+} i2c_dir_t;
+
 
 
 /**********************
@@ -110,6 +112,23 @@ void hal_uart_send_it(uint8_t * data, uint16_t len, void (*tx_cmplt)(void));
 uint8_t hal_uart_recv_char(void);
 void hal_uart_recv(uint8_t * data, uint16_t len);
 void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void));
+
+
+/* hal i2c */
+void hal_i2c_init(void);
+void hal_i2c_write(uint8_t address, uint8_t * data, uint16_t len);
+void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len);
+void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len);
+void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len);
+void hal_i2c_write_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
+void hal_i2c_read_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
+void hal_i2c_reg_write_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
+void hal_i2c_reg_read_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
+
+/* hal spi */
+void hal_spi_init(uint8_t cpol, uint8_t cpha, uint8_t lsb_first);
+void hal_spi_transfer(uint8_t * data, uint8_t * resp, uint16_t len);
+void hal_spi_transfer_it(uint8_t * data, uint8_t * resp, uint16_t len, void (*tfr_cplt)(void));
 
 /* hal systick */
 void hal_systick_init(void);

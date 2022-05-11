@@ -17,8 +17,8 @@
 
 #include <stdint.h>
 
-#include "port.h"
-#include "hal.h"
+#include <port.h>
+#include <hal.h>
 
 /**********************
  *  CONSTANTS
