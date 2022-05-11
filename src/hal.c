@@ -105,29 +105,29 @@
 #define i2c_wait() 	\
         while(!(TWCR & (1<<TWINT)))
 
-#define i2c_start() 	\
-        TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN)
+#define i2c_start(it) 	\
+        TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | ((it) << TWIE)
 
-#define i2c_restart() 	\
-        TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN)
+#define i2c_restart(it) 	\
+        TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | ((it) << TWIE)
 
-#define i2c_address_write(address) 	\
+#define i2c_address_write(address, it) 	\
         TWDR = ((address)<<1) & ~0x01;	\
-        TWCR = (1 << TWINT) | (1 << TWEN)
+        TWCR = (1 << TWINT) | (1 << TWEN) | ((it) << TWIE)
 
-#define i2c_address_read(address) 	\
+#define i2c_address_read(address, it) 	\
         TWDR = ((address)<<1) | 0x01;	\
-        TWCR = (1 << TWINT) | (1 << TWEN)
+        TWCR = (1 << TWINT) | (1 << TWEN) | ((it) << TWIE)
 
-#define i2c_write(data) 	\
+#define i2c_write(data, it) 	\
         TWDR = data;		\
-    	TWCR = (1 << TWINT) | (1 << TWEN)
+    	TWCR = (1 << TWINT) | (1 << TWEN) | ((it) << TWIE)
 
-#define i2c_read_ack()		\
-    	TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN)
+#define i2c_read_ack(it)		\
+    	TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN) | ((it) << TWIE)
 
-#define i2c_read_nack()		\
-    	TWCR = (1 << TWINT) | (1 << TWEN)
+#define i2c_read_nack(it)		\
+    	TWCR = (1 << TWINT) | (1 << TWEN) | ((it) << TWIE)
 
 #define i2c_stop()		\
     	TWCR = (1 << TWINT) | (1 << TWSTO) | (1 << TWEN)
@@ -187,6 +187,7 @@ typedef struct hal_i2c {
 	i2c_state_t state;
 	i2c_mode_t mode;
 	void (*tfr_cplt)(void);
+	void (*isr_mode)(uint8_t);
 }hal_i2c_t;
 
 
@@ -206,6 +207,11 @@ static hal_systick_t system_tick;
 /**********************
  *	PROTOTYPES
  **********************/
+
+void hal_i2c_write_isr(uint8_t status);
+void hal_i2c_read_isr(uint8_t status);
+void hal_i2c_reg_write_isr(uint8_t status);
+void hal_i2c_reg_read_isr(uint8_t status);
 
 
 /**********************
@@ -329,11 +335,13 @@ void hal_i2c_init(void) {
 
 	i2c.tfr_cplt = NULL;
 
+	i2c.isr_mode = NULL;
+
 	TWBR = TWBR_VALUE;
 
-    	TWSR = (TWPS1_VALUE << TWPS1) | (TWPS0_VALUE << TWPS0);
+    TWSR = (TWPS1_VALUE << TWPS1) | (TWPS0_VALUE << TWPS0);
     
-    	TWCR = (1 << TWEN);
+    TWCR = (1 << TWEN);
 
 }
 
@@ -349,7 +357,7 @@ void hal_i2c_write(uint8_t address, uint8_t * data, uint16_t len) {
 	i2c.len = len;
 	i2c.address = address;
 
-	i2c_start();
+	i2c_start(0);
 
 	i2c_wait();
 
@@ -358,7 +366,7 @@ void hal_i2c_write(uint8_t address, uint8_t * data, uint16_t len) {
 		return;
 	}
 
-	i2c_address_write(i2c.address);
+	i2c_address_write(i2c.address, 0);
 
 	i2c_wait();
 
@@ -370,7 +378,7 @@ void hal_i2c_write(uint8_t address, uint8_t * data, uint16_t len) {
 
 
 	while(i2c.data_p < i2c.len) {
-		i2c_write(i2c.data[i2c.data_p++]);
+		i2c_write(i2c.data[i2c.data_p++], 0);
 		i2c_wait();
 
 		if(i2c_status() != TW_MT_DATA_ACK) {
@@ -397,7 +405,7 @@ void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len) {
 	i2c.len = len;
 	i2c.address = address;
 
-	i2c_start();
+	i2c_start(0);
 
 	i2c_wait();
 
@@ -406,7 +414,7 @@ void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len) {
 		return;
 	}
 
-	i2c_address_read(i2c.address);
+	i2c_address_read(i2c.address, 0);
 
 	i2c_wait();
 
@@ -417,7 +425,7 @@ void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len) {
 	}
 
 	while(i2c.data_p < i2c.len) {
-		i2c_read_ack();
+		i2c_read_ack(0);
 		i2c_wait();
 		i2c.data[i2c.data_p++] = TWDR;
 	}
@@ -440,7 +448,7 @@ void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t le
 	i2c.address = address;
 	i2c.reg = reg;
 
-	i2c_start();
+	i2c_start(0);
 
 	i2c_wait();
 
@@ -449,7 +457,7 @@ void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t le
 		return;
 	}
 
-	i2c_address_write(i2c.address);
+	i2c_address_write(i2c.address, 0);
 
 	i2c_wait();
 
@@ -459,7 +467,7 @@ void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t le
 		return;
 	}
 
-	i2c_write(i2c.reg);
+	i2c_write(i2c.reg, 0);
 
 	i2c_wait();
 
@@ -470,7 +478,7 @@ void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t le
 	}
 
 	while(i2c.data_p < i2c.len) {
-		i2c_write(i2c.data[i2c.data_p++]);
+		i2c_write(i2c.data[i2c.data_p++], 0);
 		i2c_wait();
 
 		if(i2c_status() != TW_MT_DATA_ACK) {
@@ -498,7 +506,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 	i2c.address = address;
 	i2c.reg = reg;
 
-	i2c_start();
+	i2c_start(0);
 
 	i2c_wait();
 
@@ -507,7 +515,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 		return;
 	}
 
-	i2c_address_write(i2c.address);
+	i2c_address_write(i2c.address, 0);
 
 	i2c_wait();
 
@@ -517,7 +525,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 		return;
 	}
 
-	i2c_write(i2c.reg);
+	i2c_write(i2c.reg, 0);
 
 	i2c_wait();
 
@@ -527,9 +535,9 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 		return;
 	}
 
-	i2c_restart();
+	i2c_restart(0);
 
-	i2c_address_read(i2c.address);
+	i2c_address_read(i2c.address, 0);
 
 	i2c_wait();
 
@@ -540,7 +548,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 	}
 
 	while(i2c.data_p < i2c.len) {
-		i2c_read_ack();
+		i2c_read_ack(0);
 		i2c_wait();
 		i2c.data[i2c.data_p++] = TWDR;
 	}
@@ -562,16 +570,45 @@ void hal_i2c_write_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_
 	i2c.len = len;
 	i2c.address = address;
 	i2c.tfr_cplt = tfr_cplt;
-	i2c.mode = I2C_WR;
+	i2c.isr_mode = hal_i2c_write_isr;
 
 	i2c.state = I2C_START;
 
-	i2c_start();
-
-	TWCR |= (1<<TWIE); //enable tw interrupt
+	i2c_start(1);
 
 	
 }
+
+void hal_i2c_write_isr(uint8_t status) {
+	if(i2c.data_p >= i2c.len) {
+		i2c_stop();
+		i2c.busy = 0;
+		return;
+	}
+	switch(status) {
+	case TW_START:
+	case TW_RSTART:
+		i2c.state = I2C_ADDR;
+		i2c_address_write(i2c.address, 1);
+		break;
+	case TW_MT_SLA_ACK:
+	case TW_MT_DATA_ACK:
+		i2c.state = I2C_DATA;
+		i2c_write(i2c.data[i2c.data_p++], 1);
+		break;
+	case TW_MT_SLA_NACK:
+	case TW_MT_DATA_NACK:
+	case TW_LOST:
+		//maybe retry?
+	default:
+		i2c_stop();
+		i2c.busy=0;
+		break;
+	}
+}
+
+
+
 void hal_i2c_read_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_cplt)(void)) {
 	if(i2c.busy) {
 		return;
@@ -588,9 +625,7 @@ void hal_i2c_read_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_c
 
 	i2c.state = I2C_START;
 
-	i2c_start();
-
-	TWCR |= (1<<TWIE); //enable tw interrupt
+	i2c_start(1);
 
 	
 
@@ -614,9 +649,8 @@ void hal_i2c_reg_write_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t
 
 	i2c.state = I2C_START;
 
-	i2c_start();
+	i2c_start(1);
 
-	TWCR |= (1<<TWIE); //enable tw interrupt
 	
 }
 
@@ -637,9 +671,7 @@ void hal_i2c_reg_read_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t 
 
 	i2c.state = I2C_START;
 
-	i2c_start();
-
-	TWCR |= (1<<TWIE); //enable tw interrupt
+	i2c_start(1);
 
 }
 
@@ -813,77 +845,9 @@ ISR(USART_RX_vect) {
 ISR(TWI_vect) {
 	uint8_t status = i2c_status();
 
-	switch(status) {
-	case TW_START:
-	case TW_RSTART:
-		//send device address
-		switch(i2c.mode) {
-		case I2C_RD:
-			i2c_address_read(i2c.address);
-			break;
-		case I2C_RD_REG:
-			if(i2c.state == I2C_REG) {
-				i2c_address_write(i2c.address);
-			}else{
-				i2c_address_read(i2c.address);
-			}
-			break;
-		case I2C_WR:
-		case I2C_WR_REG:
-			i2c_address_write(i2c.address);
-			break;
-		}
-		break;
-	case TW_MT_SLA_ACK:
-		switch(i2c.mode) {
-		case I2C_RD:
-			//read data (wait for wata ?)
-			i2c_read_ack();
-			break;
-		case I2C_RD_REG:
-			//read data or write reg
-			if(i2c.state == I2C_REG) {
-				i2c_write(i2c.reg);
-			}else{
-				//wait for data??--> arriving in the next cycle
-				i2c_read_ack();
-			}
-			break;
-		case I2C_WR:
-			i2c_write(i2c.data[i2c.data_p++]);
-			break;
-		case I2C_WR_REG:
-			i2c_write(i2c.reg);
-			break;
-		}
-
-		break;
-	case TW_MT_DATA_ACK:
-		switch(i2c.mode) {
-		case I2C_RD:
-		case I2C_RD_REG:
-			i2c_read_ack();
-			break;
-		case I2C_WR:
-		case I2C_WR_REG:
-			i2c_write(i2c.data[i2c.data_p++]);
-			break;
-		}
-		break;
-	case TW_MT_SLA_NACK:
-	case TW_MT_DATA_NACK:
-		//error
-		break;
-	case TW_LOST:
-		//arbitration lost, try again?
-		//error
-		break;
-	default://handle an error
-		break;
+	if(i2c.isr_mode) {
+		i2c.isr_mode(status);
 	}
-
-	//check if finished
-
 
 }
 
