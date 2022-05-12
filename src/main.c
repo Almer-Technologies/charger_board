@@ -75,7 +75,7 @@ static rocket_params_t sp;
  * Uses i2c to communicate with sensors
  * about 50Hz -> record max acc, vel and alt
  */
-void sensor_thread(void) {
+void sensor_thread_entry(void) {
 	/* thread setup */
 
 
@@ -90,7 +90,7 @@ void sensor_thread(void) {
  * Uses SPI to communicate with the radio
  * as fast as possible send last data
  */
-void radio_thread(void) {
+void radio_thread_entry(void) {
 	/* thread setup */
 
 
@@ -105,7 +105,7 @@ void radio_thread(void) {
  * Determines rocket state and triggers flight events
  * use sensor data to estimate state
  */
-void control_thread(void) {
+void control_thread_entry(void) {
 	/* thread setup */
 
 
@@ -120,7 +120,7 @@ void control_thread(void) {
  * Writes flight events to eeprom
  */
 
-void logging_thread(void) {
+void logger_thread_entry(void) {
 	/* thread setup */
 
 
@@ -183,16 +183,39 @@ int main(void) {
 	hal_gpio_init_out(GPIOD, GPIO_PIN2|GPIO_PIN3|GPIO_PIN4);
 
 	/* threads definitions */
+	static uint8_t stack_a[256];
 	static os_thread_t thread_a = {
 		.name = "thread_a"
 	};
+
+	static uint8_t stack_b[256];
 	static os_thread_t thread_b = {
 		.name = "thread_b"
 	};
 
+	static uint8_t sensor_stack[256];
+	static os_thread_t sensor_thread = {
+		.name = "sensor  "
+	};
 
-	static uint8_t stack_a[256];
-	static uint8_t stack_b[256];
+	static uint8_t radio_stack[256];
+	static os_thread_t radio_thread = {
+		.name = "radio   "
+	};
+
+	static uint8_t control_stack[256];
+	static os_thread_t control_thread = {
+		.name = "control "
+	};
+
+	static uint8_t logger_stack[256];
+	static os_thread_t logger_thread = {
+		.name = "logger  "
+	};
+
+
+
+
 
 
 	/* threads creation */

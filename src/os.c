@@ -47,7 +47,7 @@ typedef struct os_scheduler {
  *	VARIABLES
  **********************/
 
-static volatile os_scheduler_t scheduler;
+static os_scheduler_t scheduler;
 
 static os_thread_t idle_thread = {
 	.name="idle_thd"
@@ -69,8 +69,6 @@ void os_scheduler_add_threadI(	os_scheduler_t * sch,
 void os_thread_print(os_thread_t * thd);
 
 os_thread_t * os_scheduler_get_ready(os_scheduler_t * sch);
-
-void os_system_switch(os_thread_t * old, os_thread_t * new);
 
 /**********************
  *	DECLARATIONS
@@ -197,6 +195,7 @@ os_thread_t * os_scheduler_get_ready(os_scheduler_t * sch) {
 	}
 	//this should return the idle thread
 	os_system_panic("idle thread not ready!");
+	return NULL;
 }
 
 
