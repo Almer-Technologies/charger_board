@@ -370,7 +370,7 @@ void hal_i2c_write(uint8_t address, uint8_t * data, uint16_t len) {
 
 	i2c_wait();
 
-	if(i2c_status() != TW_MT_SLA_ACK) {
+	if(i2c_status() != TW_MT_SLAW_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
 		return;
@@ -381,7 +381,7 @@ void hal_i2c_write(uint8_t address, uint8_t * data, uint16_t len) {
 		i2c_write(i2c.data[i2c.data_p++], 0);
 		i2c_wait();
 
-		if(i2c_status() != TW_MT_DATA_ACK) {
+		if(i2c_status() != TW_MT_DATAW_ACK) {
 			i2c_stop();
 			i2c.busy = 0;
 			return;
@@ -418,7 +418,7 @@ void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len) {
 
 	i2c_wait();
 
-	if(i2c_status() != TW_MT_SLA_ACK) {
+	if(i2c_status() != TW_MT_SLAR_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
 		return;
@@ -427,6 +427,11 @@ void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len) {
 	while(i2c.data_p < i2c.len) {
 		i2c_read_ack(0);
 		i2c_wait();
+		if(i2c_status() != TW_MT_DATAR_ACK) {
+			i2c_stop();
+			i2c.busy = 0;
+			return;
+		}
 		i2c.data[i2c.data_p++] = TWDR;
 	}
 
@@ -461,7 +466,7 @@ void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t le
 
 	i2c_wait();
 
-	if(i2c_status() != TW_MT_SLA_ACK) {
+	if(i2c_status() != TW_MT_SLAW_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
 		return;
@@ -471,7 +476,7 @@ void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t le
 
 	i2c_wait();
 
-	if(i2c_status() != TW_MT_DATA_ACK) {
+	if(i2c_status() != TW_MT_DATAW_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
 		return;
@@ -481,7 +486,7 @@ void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t le
 		i2c_write(i2c.data[i2c.data_p++], 0);
 		i2c_wait();
 
-		if(i2c_status() != TW_MT_DATA_ACK) {
+		if(i2c_status() != TW_MT_DATAW_ACK) {
 			i2c_stop();
 			i2c.busy = 0;
 			return;
@@ -519,7 +524,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 
 	i2c_wait();
 
-	if(i2c_status() != TW_MT_SLA_ACK) {
+	if(i2c_status() != TW_MT_SLAW_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
 		return;
@@ -529,7 +534,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 
 	i2c_wait();
 
-	if(i2c_status() != TW_MT_DATA_ACK) {
+	if(i2c_status() != TW_MT_DATAW_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
 		return;
@@ -541,7 +546,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 
 	i2c_wait();
 
-	if(i2c_status() != TW_MT_SLA_ACK) {
+	if(i2c_status() != TW_MT_SLAR_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
 		return;
@@ -550,6 +555,11 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 	while(i2c.data_p < i2c.len) {
 		i2c_read_ack(0);
 		i2c_wait();
+		if(i2c_status() != TW_MT_DATAR_ACK) {
+			i2c_stop();
+			i2c.busy = 0;
+			return;
+		}
 		i2c.data[i2c.data_p++] = TWDR;
 	}
 
@@ -572,32 +582,31 @@ void hal_i2c_write_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_
 	i2c.tfr_cplt = tfr_cplt;
 	i2c.isr_mode = hal_i2c_write_isr;
 
-	i2c.state = I2C_START;
-
 	i2c_start(1);
 
 	
 }
 
 void hal_i2c_write_isr(uint8_t status) {
-	if(i2c.data_p >= i2c.len) {
-		i2c_stop();
-		i2c.busy = 0;
-		return;
-	}
 	switch(status) {
 	case TW_START:
 	case TW_RSTART:
-		i2c.state = I2C_ADDR;
 		i2c_address_write(i2c.address, 1);
 		break;
-	case TW_MT_SLA_ACK:
-	case TW_MT_DATA_ACK:
-		i2c.state = I2C_DATA;
+	case TW_MT_SLAW_ACK:
+	case TW_MT_DATAW_ACK:
+		if(i2c.data_p >= i2c.len) {
+			i2c_stop();
+			i2c.busy = 0;
+			if(i2c.tfr_cplt) {
+				i2c.tfr_cplt();
+			}
+			return;
+		}
 		i2c_write(i2c.data[i2c.data_p++], 1);
 		break;
-	case TW_MT_SLA_NACK:
-	case TW_MT_DATA_NACK:
+	case TW_MT_SLAW_NACK:
+	case TW_MT_DATAW_NACK:
 	case TW_LOST:
 		//maybe retry?
 	default:
@@ -621,15 +630,45 @@ void hal_i2c_read_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_c
 	i2c.len = len;
 	i2c.address = address;
 	i2c.tfr_cplt = tfr_cplt;
-	i2c.mode = I2C_RD;
-
-	i2c.state = I2C_START;
+	i2c.isr_mode = hal_i2c_read_isr;
 
 	i2c_start(1);
+}
 
-	
-
-
+void hal_i2c_read_isr(uint8_t status) {
+	switch(status) {
+	case TW_START:
+	case TW_RSTART:
+		i2c_address_read(i2c.address, 1);
+		break;
+	case TW_MT_SLAR_ACK:
+		//request data
+		i2c_read_ack(1);
+		break;
+	case TW_MT_DATAR_ACK:
+		//get new data
+		i2c.data[i2c.data_p++] = TWDR;
+		//if enough, stop
+		if(i2c.data_p >= i2c.len) {
+			i2c_stop();
+			i2c.busy = 0;
+			if(i2c.tfr_cplt) {
+				i2c.tfr_cplt();
+			}
+			return;
+		}
+		//request new data
+		i2c_read_ack(1);
+		break;
+	case TW_MT_SLAR_NACK:
+	case TW_MT_DATAR_NACK:
+	case TW_LOST:
+		//maybe retry?
+	default:
+		i2c_stop();
+		i2c.busy=0;
+		break;
+	}
 }
 
 void hal_i2c_reg_write_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len, void (*tfr_cplt)(void)) {
@@ -645,13 +684,44 @@ void hal_i2c_reg_write_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t
 	i2c.address = address;
 	i2c.reg = reg;
 	i2c.tfr_cplt = tfr_cplt;
-	i2c.mode = I2C_WR_REG;
 
-	i2c.state = I2C_START;
-
+	i2c.isr_mode = hal_i2c_reg_write_isr;
 	i2c_start(1);
 
-	
+}
+
+void hal_i2c_reg_write_isr(uint8_t status) {
+	switch(status) {
+	case TW_START:
+	case TW_RSTART:
+		i2c_address_write(i2c.address, 1);
+		break;
+	case TW_MT_SLAW_ACK:
+		//write register
+		i2c_write(i2c.reg, 1);
+		break;
+	case TW_MT_DATAW_ACK:
+		//if enough, stop
+		if(i2c.data_p >= i2c.len) {
+			i2c_stop();
+			i2c.busy = 0;
+			if(i2c.tfr_cplt) {
+				i2c.tfr_cplt();
+			}
+			return;
+		}
+		//write data
+		i2c_write(i2c.data[i2c.data_p++], 1);
+		break;
+	case TW_MT_SLAR_NACK:
+	case TW_MT_DATAR_NACK:
+	case TW_LOST:
+		//maybe retry?
+	default:
+		i2c_stop();
+		i2c.busy=0;
+		break;
+	}
 }
 
 void hal_i2c_reg_read_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len, void (*tfr_cplt)(void)) {
@@ -667,14 +737,59 @@ void hal_i2c_reg_read_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t 
 	i2c.address = address;
 	i2c.reg = reg;
 	i2c.tfr_cplt = tfr_cplt;
-	i2c.mode = I2C_RD_REG;
 
-	i2c.state = I2C_START;
+	i2c.isr_mode = hal_i2c_reg_read_isr;
 
 	i2c_start(1);
 
 }
 
+void hal_i2c_reg_read_isr(uint8_t status) {
+	switch(status) {
+	case TW_START:
+		i2c_address_write(i2c.address, 1);
+		break;
+	case TW_MT_SLAW_ACK:
+		//write register
+		i2c_write(i2c.reg, 1);
+		break;
+	case TW_MT_DATAW_ACK:
+		i2c_restart(1);
+		break;
+	case TW_RSTART:
+		i2c_address_read(i2c.address, 1);
+		break;
+	case TW_MT_SLAR_ACK:
+		//request data
+		i2c_read_ack(1);
+		break;
+	case TW_MT_DATAR_ACK:
+		//get new data
+		i2c.data[i2c.data_p++] = TWDR;
+		//if enough, stop
+		if(i2c.data_p >= i2c.len) {
+			i2c_stop();
+			i2c.busy = 0;
+			if(i2c.tfr_cplt) {
+				i2c.tfr_cplt();
+			}
+			return;
+		}
+		//request new data
+		i2c_read_ack(1);
+		break;
+	case TW_MT_SLAW_NACK:
+	case TW_MT_DATAW_NACK:
+	case TW_MT_SLAR_NACK:
+	case TW_MT_DATAR_NACK:
+	case TW_LOST:
+		//maybe retry?
+	default:
+		i2c_stop();
+		i2c.busy=0;
+		break;
+	}
+}
 
 
 /* hal spi */

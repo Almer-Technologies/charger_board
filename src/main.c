@@ -20,6 +20,9 @@
  *	CONSTANTS
  **********************/
 
+#define X 0
+#define Y 1
+#define Z 2
 
 /**********************
  *	MACROS
@@ -30,6 +33,24 @@
  *	TYPEDEFS
  **********************/
 
+typedef enum rocket_state {
+	ROCKET_IDLE,
+	ROCKET_PRESSURIZED,
+	ROCKET_POWERED,
+	ROCKET_COAST,
+	ROCKET_APOGEE,
+	ROCKET_TOUCHDOWN
+}rocket_state_t;
+
+
+typedef struct rocket_params {
+	uint16_t acc[3];
+	uint16_t gyro[3];
+	uint16_t baro;
+	rocket_state_t state;
+
+}rocket_params_t;
+
 
 /**********************
  *	VARIABLES
@@ -38,7 +59,7 @@
 static os_event_t event_a;
 
 
-
+static rocket_params_t sp;
 
 /**********************
  *	PROTOTYPES
@@ -49,9 +70,65 @@ static os_event_t event_a;
  *	DECLARATIONS
  **********************/
 
+/**
+ * Sensor acquisition thread
+ * Uses i2c to communicate with sensors
+ * about 50Hz -> record max acc, vel and alt
+ */
+void sensor_thread(void) {
+	/* thread setup */
 
 
+	/* thread mainloop */
+	for(;;) {
 
+	}
+}
+
+/**
+ * Radio feedback thread
+ * Uses SPI to communicate with the radio
+ * as fast as possible send last data
+ */
+void radio_thread(void) {
+	/* thread setup */
+
+
+	/* thread mainloop */
+	for(;;) {
+
+	}
+}
+
+/**
+ * Global control thread
+ * Determines rocket state and triggers flight events
+ * use sensor data to estimate state
+ */
+void control_thread(void) {
+	/* thread setup */
+
+
+	/* thread mainloop */
+	for(;;) {
+
+	}
+}
+
+/**
+ * EEPROM Logging Thread
+ * Writes flight events to eeprom
+ */
+
+void logging_thread(void) {
+	/* thread setup */
+
+
+	/* thread mainloop */
+	for(;;) {
+
+	}
+}
 
 
 void thread_a_entry(void) {

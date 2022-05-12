@@ -278,11 +278,15 @@
 
 #define TW_START		    0x08
 #define TW_RSTART		    0x10
-#define TW_MT_SLA_ACK	    0x18
-#define TW_MT_SLA_NACK	    0x20
-#define TW_MT_DATA_ACK	    0x28
-#define TW_MT_DATA_NACK	    0x30
+#define TW_MT_SLAW_ACK	    0x18
+#define TW_MT_SLAW_NACK	    0x20
+#define TW_MT_DATAW_ACK	    0x28
+#define TW_MT_DATAW_NACK	0x30
 #define TW_LOST		        0x38
+#define TW_MT_SLAR_ACK		0x40
+#define TW_MT_SLAR_NACK		0x48
+#define TW_MT_DATAR_ACK		0x50
+#define TW_MT_DATAR_NACK	0x58
 
 
 
