@@ -424,7 +424,7 @@ void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len) {
 		return;
 	}
 
-	while(i2c.data_p < i2c.len) {
+	while(i2c.data_p < i2c.len-1) {
 		i2c_read_ack(0);
 		i2c_wait();
 		if(i2c_status() != TW_MT_DATAR_ACK) {
@@ -434,6 +434,15 @@ void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len) {
 		}
 		i2c.data[i2c.data_p++] = TWDR;
 	}
+	//last byte without ack
+	i2c_read_nack(0);
+	i2c_wait();
+	if(i2c_status() != TW_MT_DATAR_NACK) {
+		i2c_stop();
+		i2c.busy = 0;
+		return;
+	}
+	i2c.data[i2c.data_p++] = TWDR;
 
 	i2c_stop();
 
@@ -498,9 +507,9 @@ void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t le
 	i2c.busy = 0;
 }
 
-void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len) {
+uint8_t hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len) {
 	if(i2c.busy) {
-		return;
+		return 1;
 	}
 
 	i2c.busy = 1;
@@ -517,7 +526,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 
 	if(i2c_status() != TW_START) {
 		i2c.busy = 0;
-		return;
+		return 1;
 	}
 
 	i2c_address_write(i2c.address, 0);
@@ -527,7 +536,7 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 	if(i2c_status() != TW_MT_SLAW_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
-		return;
+		return 1;
 	}
 
 	i2c_write(i2c.reg, 0);
@@ -537,10 +546,18 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 	if(i2c_status() != TW_MT_DATAW_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
-		return;
+		return 1;
 	}
 
 	i2c_restart(0);
+
+	i2c_wait();
+
+	if(i2c_status() != TW_RSTART) {
+		i2c_stop();
+		i2c.busy = 0;
+		return 1;
+	}
 
 	i2c_address_read(i2c.address, 0);
 
@@ -549,23 +566,34 @@ void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len
 	if(i2c_status() != TW_MT_SLAR_ACK) {
 		i2c_stop();
 		i2c.busy = 0;
-		return;
+		return 1;
 	}
 
-	while(i2c.data_p < i2c.len) {
+	while(i2c.data_p < i2c.len-1) {
 		i2c_read_ack(0);
 		i2c_wait();
 		if(i2c_status() != TW_MT_DATAR_ACK) {
 			i2c_stop();
 			i2c.busy = 0;
-			return;
+			return 1;
 		}
 		i2c.data[i2c.data_p++] = TWDR;
 	}
+	//last byte without ack
+	i2c_read_nack(0);
+	i2c_wait();
+	if(i2c_status() != TW_MT_DATAR_NACK) {
+		i2c_stop();
+		i2c.busy = 0;
+		return 1;
+	}
+	i2c.data[i2c.data_p++] = TWDR;
+
 
 	i2c_stop();
 
 	i2c.busy = 0;
+	return 0;
 }
 
 void hal_i2c_write_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_cplt)(void)) {
@@ -649,19 +677,24 @@ void hal_i2c_read_isr(uint8_t status) {
 		//get new data
 		i2c.data[i2c.data_p++] = TWDR;
 		//if enough, stop
-		if(i2c.data_p >= i2c.len) {
-			i2c_stop();
-			i2c.busy = 0;
-			if(i2c.tfr_cplt) {
-				i2c.tfr_cplt();
-			}
-			return;
+		if(i2c.data_p < i2c.len-1) {
+			//request new data
+			i2c_read_ack(1);
+		} else {
+			//request new data last
+			i2c_read_nack(1);
 		}
-		//request new data
-		i2c_read_ack(1);
+		break;
+	case TW_MT_DATAR_NACK:
+		//last data
+		i2c.data[i2c.data_p++] = TWDR;
+		i2c_stop();
+		i2c.busy = 0;
+		if(i2c.tfr_cplt) {
+			i2c.tfr_cplt();
+		}
 		break;
 	case TW_MT_SLAR_NACK:
-	case TW_MT_DATAR_NACK:
 	case TW_LOST:
 		//maybe retry?
 	default:
@@ -761,27 +794,38 @@ void hal_i2c_reg_read_isr(uint8_t status) {
 		break;
 	case TW_MT_SLAR_ACK:
 		//request data
-		i2c_read_ack(1);
+		if(i2c.data_p < i2c.len-1) {
+			//request new data
+			i2c_read_ack(1);
+		} else {
+			//request new data last
+			i2c_read_nack(1);
+		}
 		break;
 	case TW_MT_DATAR_ACK:
 		//get new data
 		i2c.data[i2c.data_p++] = TWDR;
 		//if enough, stop
-		if(i2c.data_p >= i2c.len) {
-			i2c_stop();
-			i2c.busy = 0;
-			if(i2c.tfr_cplt) {
-				i2c.tfr_cplt();
-			}
-			return;
+		if(i2c.data_p < i2c.len-1) {
+			//request new data
+			i2c_read_ack(1);
+		} else {
+			//request new data last
+			i2c_read_nack(1);
 		}
-		//request new data
-		i2c_read_ack(1);
+		break;
+	case TW_MT_DATAR_NACK:
+		//last data
+		i2c.data[i2c.data_p++] = TWDR;
+		i2c_stop();
+		i2c.busy = 0;
+		if(i2c.tfr_cplt) {
+			i2c.tfr_cplt();
+		}
 		break;
 	case TW_MT_SLAW_NACK:
 	case TW_MT_DATAW_NACK:
 	case TW_MT_SLAR_NACK:
-	case TW_MT_DATAR_NACK:
 	case TW_LOST:
 		//maybe retry?
 	default:
@@ -823,8 +867,9 @@ void hal_spi_transfer(uint8_t * data, uint8_t * resp, uint16_t len) {
 	spi.resp = resp;
 	spi.len = len;
 	spi.data_p = 0;
+	cli();
 	hal_gpio_clr(GPIOB, GPIO_PIN2); //clear chip select
-
+	sei();
 	while(spi.data_p < spi.len) {
 		SPDR = spi.data[spi.data_p];
 
@@ -833,7 +878,9 @@ void hal_spi_transfer(uint8_t * data, uint8_t * resp, uint16_t len) {
 		spi.resp[spi.data_p++] = SPDR;
 	}
 
+	cli();
 	hal_gpio_set(GPIOB, GPIO_PIN2); //set chip select
+	sei();
 
 	spi.busy = 0;
 }
@@ -858,6 +905,8 @@ void hal_spi_transfer_it(uint8_t * data, uint8_t * resp, uint16_t len, void (*tf
 	SPCR |= (1<<SPIE);
 
 }
+
+
 
 
 

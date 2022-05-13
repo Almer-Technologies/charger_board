@@ -67,6 +67,9 @@
 #define hal_print(string) \
     hal_uart_send(string, sizeof(string));
 
+#define hal_print_it(string) \
+    hal_uart_send_it(string, sizeof(string), NULL);
+
 
 /* hal sleep */
 
@@ -81,6 +84,12 @@
 /**********************
  *  TYPEDEFS
  **********************/
+
+typedef enum hal_error {
+	HAL_SUCCESS,
+	HAL_ERROR,
+	HAL_BUSY
+}hal_error_t;
 
 
 typedef uint32_t hal_systick_t;
@@ -119,7 +128,7 @@ void hal_i2c_init(void);
 void hal_i2c_write(uint8_t address, uint8_t * data, uint16_t len);
 void hal_i2c_read(uint8_t address, uint8_t * data, uint16_t len);
 void hal_i2c_reg_write(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len);
-void hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len);
+uint8_t hal_i2c_reg_read(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len);
 void hal_i2c_write_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
 void hal_i2c_read_it(uint8_t address, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
 void hal_i2c_reg_write_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
