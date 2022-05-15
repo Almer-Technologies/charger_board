@@ -881,7 +881,6 @@ void hal_spi_transfer(uint8_t * data, uint8_t * resp, uint16_t len) {
 	cli();
 	hal_gpio_set(GPIOB, GPIO_PIN2); //set chip select
 	sei();
-
 	spi.busy = 0;
 }
 
