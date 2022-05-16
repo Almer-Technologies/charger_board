@@ -144,6 +144,7 @@ void os_thread_print(os_thread_t * thd) {
 			hal_uart_send_char('D');
 			break;
 	}
+
 	hal_uart_send_char('\n');
 	hal_uart_send_char('\r');
 }

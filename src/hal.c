@@ -24,7 +24,7 @@
 
 #define I2C_FREQUENCY 400000
 
-#define SPI_FREQUENCY 1000000
+#define SPI_FREQUENCY 500000
 
 #define SPI_MIN_FREQUENCY 0
 
@@ -158,6 +158,8 @@ typedef struct hal_spi {
 	uint8_t * resp;
 	uint16_t len;
 	uint16_t data_p;
+	uint8_t reg;
+	uint8_t use_reg;
 	void (*tfr_cplt)(void);
 }hal_spi_t;
 
@@ -905,6 +907,117 @@ void hal_spi_transfer_it(uint8_t * data, uint8_t * resp, uint16_t len, void (*tf
 
 }
 
+void hal_spi_reg_write(uint8_t addr, uint8_t * data, uint16_t len) {
+
+	if(spi.busy) {
+		return;
+	}
+
+	spi.busy = 1;
+	spi.data = data;
+	spi.resp = NULL;
+	spi.reg = addr;
+	spi.len = len;
+	spi.data_p = 0;
+	cli();
+	hal_gpio_clr(GPIOB, GPIO_PIN2); //clear chip select
+	sei();
+
+	SPDR = spi.reg;
+	while(!(SPSR & (1<<SPIF)));
+
+	while(spi.data_p < spi.len) {
+		SPDR = spi.data[spi.data_p];
+
+		while(!(SPSR & (1<<SPIF)));
+
+		spi.resp[spi.data_p++] = SPDR;
+	}
+
+	cli();
+	hal_gpio_set(GPIOB, GPIO_PIN2); //set chip select
+	sei();
+	spi.busy = 0;
+}
+
+void hal_spi_reg_read(uint8_t addr, uint8_t * data, uint16_t len) {
+
+	if(spi.busy) {
+		return;
+	}
+
+	spi.busy = 1;
+	spi.resp = data;
+	spi.data = NULL;
+	spi.reg = addr;
+	spi.len = len;
+	spi.data_p = 0;
+	cli();
+	hal_gpio_clr(GPIOB, GPIO_PIN2); //clear chip select
+	sei();
+
+	SPDR = spi.reg;
+	while(!(SPSR & (1<<SPIF)));
+
+	while(spi.data_p < spi.len) {
+		SPDR = 0;
+
+		while(!(SPSR & (1<<SPIF)));
+
+		spi.resp[spi.data_p++] = SPDR;
+	}
+
+	cli();
+	hal_gpio_set(GPIOB, GPIO_PIN2); //set chip select
+	sei();
+
+	spi.busy = 0;
+}
+
+void hal_spi_reg_write_it(uint8_t addr, uint8_t * data, uint16_t len, void (*tfr_cplt)(void)) {
+
+	if(spi.busy) {
+		return;
+	}
+	spi.busy = 1;
+	spi.data = data;
+	spi.resp = NULL;
+	spi.len = len;
+	spi.data_p = 0;
+	spi.reg = addr;
+
+	hal_gpio_clr(GPIOB, GPIO_PIN2); //clear chip select
+
+	spi.tfr_cplt = tfr_cplt;
+
+	SPDR = spi.reg;
+
+	SPCR |= (1<<SPIE);
+
+}
+
+void hal_spi_reg_read_it(uint8_t addr, uint8_t * data, uint16_t len, void (*tfr_cplt)(void)) {
+
+	if(spi.busy) {
+		return;
+	}
+	spi.busy = 1;
+	spi.data = NULL;
+	spi.resp = data;
+	spi.len = len;
+	spi.data_p = 0;
+	spi.reg = addr;
+
+	hal_gpio_clr(GPIOB, GPIO_PIN2); //clear chip select
+
+	spi.tfr_cplt = tfr_cplt;
+
+	SPDR = spi.reg;
+
+	SPCR |= (1<<SPIE);
+
+}
+
 
 
 
@@ -1017,7 +1130,11 @@ ISR(TWI_vect) {
 /* spi */
 
 ISR(SPI_STC_vect) {
-	spi.resp[spi.data_p++] = SPDR;
+	if(spi.resp) {
+		spi.resp[spi.data_p++] = SPDR;
+	} else {
+		spi.data_p++;
+	}
 	if(spi.data_p >= spi.len) {
 		SPCR &= ~(1<<SPIE);
 		hal_gpio_set(GPIOB, GPIO_PIN2); //set chip select
@@ -1026,7 +1143,11 @@ ISR(SPI_STC_vect) {
 			spi.tfr_cplt();
 		}
 	} else {
-		SPDR = spi.data[spi.data_p];
+		if(spi.data) {
+			SPDR = spi.data[spi.data_p];
+		} else {
+			SPDR = 0;
+		}
 	}
 	
 }

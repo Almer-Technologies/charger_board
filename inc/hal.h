@@ -138,6 +138,10 @@ void hal_i2c_reg_read_it(uint8_t address, uint8_t reg, uint8_t * data, uint16_t 
 void hal_spi_init(uint8_t cpol, uint8_t cpha, uint8_t lsb_first);
 void hal_spi_transfer(uint8_t * data, uint8_t * resp, uint16_t len);
 void hal_spi_transfer_it(uint8_t * data, uint8_t * resp, uint16_t len, void (*tfr_cplt)(void));
+void hal_spi_reg_write(uint8_t addr, uint8_t * data, uint16_t len);
+void hal_spi_reg_read(uint8_t addr, uint8_t * data, uint16_t len);
+void hal_spi_reg_write_it(uint8_t addr, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
+void hal_spi_reg_read_it(uint8_t addr, uint8_t * data, uint16_t len, void (*tfr_cplt)(void));
 
 /* hal systick */
 void hal_systick_init(void);

@@ -17,7 +17,7 @@ OPT=s
 
 FORMAT=ihex
 
-DEBUG_LEVEL=# -g #-DGDB
+DEBUG_LEVEL=-g #-DGDB
 
 WARNINGS=#-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
