@@ -13,6 +13,7 @@
 #include <atmega328p.h>
 #include <os.h>
 #include <hal.h>
+#include <charger.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -95,19 +96,12 @@ void  feedback_thread_entry(void) {
 
 }
 
-
-#define CHARGER_ADDRESS		0x3F
-
-
 void  control_thread_entry(void) {
 
-	/* Disable OVP on input */
-
-	hal
+	charger_init();
 
 
 	for(;;) {
-
 		os_delay(1000);
 		
 	}
