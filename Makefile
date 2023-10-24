@@ -3,7 +3,7 @@
 
 # SanpellegrinOS
 
-TARGET=sanpellegrinos
+TARGET=chargerBoard
 
 #parameters
 
@@ -74,7 +74,7 @@ SOURCEDIR = src
 HEADERDIR = inc
 DEBUGDIR = debug
 
-ASOURCES = $(wildcard $(SOURCEDIR)/*.s)
+ASOURCES = $(wildcard $(SOURCEDIR)/*.S)
 CSOURCES = $(wildcard $(SOURCEDIR)/*.c)
 #CSOURCES += $(wildcard $(DEBUGDIR)/*.c)
 OBJECTS =  $(patsubst $(SOURCEDIR)/%.s, $(BUILDDIR)/%.o, $(ASOURCES))
@@ -87,40 +87,46 @@ COLOR_STOP="\x1b[0m"
 SAY_BUILD=${COLOR_START}"[build]"${COLOR_STOP}
 
 
-all: clean $(TARGET).elf $(TARGET).hex $(TARGET).lst size
+all: clean builddir $(TARGET).elf $(TARGET).hex $(TARGET).lst size
+
+
+
+builddir: 
+	@mkdir -p build
 
 $(TARGET).elf: $(OBJECTS)
 	@/bin/echo -e ${SAY_BUILD}" compiling elf file: " $^
-	${CC} -mmcu=${MCU} $(CFLAGS) -o $@ $^
+	@${CC} -mmcu=${MCU} $(CFLAGS) -o $@ $^
 
 
 
 size: $(TARGET).elf
 	@/bin/echo -e ${SAY_BUILD}" final size: "
-	${SIZE} $<
+	@${SIZE} $<
 
 
 %.hex: %.elf
 	@/bin/echo -e ${SAY_BUILD}" copying binary: " $<
-	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
+	@$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
 
 %.lst: %.elf
 	@/bin/echo -e ${SAY_BUILD}" dumping listing: " $<
-	$(OBJDUMP) -h -S $< > $@
+	@$(OBJDUMP) -h -S $< > $@
 
 # Compile: create object files from C source files.
 $(BUILDDIR)/%.o : $(SOURCEDIR)/%.c
 	@/bin/echo -e ${SAY_BUILD}" compiling objects from c source: " $<
-	$(CC) -c -I$(HEADERDIR) -I$(DEBUGDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
+	@$(CC) -c -I$(HEADERDIR) -I$(DEBUGDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
 
 # Assemble: create object files from assembler source files.
-$(BUILDDIR)/%.o : $(SOURCEDIR)/%.s
+$(BUILDDIR)/%.o : $(SOURCEDIR)/%.S
 	@/bin/echo -e ${SAY_BUILD}" compiling objects from s source: " $<
-	$(CC) -c -I$(HEADERDIR) -I$(DEBUGDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
+	@$(CC) -c -I$(HEADERDIR) -I$(DEBUGDIR) -I$(SOURCEDIR) $(CFLAGS) $< -o $@
 
 clean:
-	$(REMOVE) build/*
-	$(REMOVE) *.elf *.hex *.lst
+	@/bin/echo -e ${SAY_BUILD}" Cleaning..."
+	@$(REMOVE) build/*
+	@$(REMOVE) *.elf *.hex *.lst
 
 program: clean $(TARGET).elf $(TARGET).hex $(TARGET).lst
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)

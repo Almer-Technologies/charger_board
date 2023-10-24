@@ -260,7 +260,7 @@ void os_system_start(void) {
 void os_system_panic(const uint8_t * msg) {
 	cli();
 	hal_uart_send("PANIC  ", 7);
-	hal_uart_send(msg, sizeof(msg));
+	hal_uart_send((uint8_t *)msg, sizeof(msg));
 	hal_uart_send("\n\r", 2);
 	while(1) {	
 

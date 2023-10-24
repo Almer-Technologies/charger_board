@@ -29,34 +29,35 @@
 #define SPI_MIN_FREQUENCY 0
 
 #ifndef F_CPU
-    #define F_CPU 16000000UL
-    #warning "F_CPU not defined! Assuming 16MHz."
+    #define F_CPU 8000000UL
+    #warning "F_CPU not defined! Assuming 8MHz."
 #endif
+
 
 /* i2c freq */
 
-#if (F_CPU/I2C_FREQUENCY - 16) / (2 * 1) >= 10 \
-        && (F_CPU/I2C_FREQUENCY - 16) / (2 * 1) <= 0xFF
+#if (F_CPU/I2C_FREQUENCY - 16) / (1) >= 0 \
+        && (F_CPU/I2C_FREQUENCY - 16) / (1) <= 0xFF
     #define TWI_PRESCALER 1
     #define TWPS0_VALUE 0
     #define TWPS1_VALUE 0
-#elif (F_CPU/I2C_FREQUENCY - 16) / (2 * 4) >= 10 \
-        && (F_CPU/I2C_FREQUENCY - 16) / (2 * 4) <= 0xFF
+#elif (F_CPU/I2C_FREQUENCY - 16) / (4) >= 0 \
+        && (F_CPU/I2C_FREQUENCY - 16) / (4) <= 0xFF
     #define TWI_PRESCALER 4
     #define TWPS0_VALUE 1
     #define TWPS1_VALUE 0
-#elif (F_CPU/I2C_FREQUENCY - 16) / (2 * 16) >= 10 \
-        && (F_CPU/I2C_FREQUENCY - 16) / (2 * 16) <= 0xFF
+#elif (F_CPU/I2C_FREQUENCY - 16) / (16) >= 0 \
+        && (F_CPU/I2C_FREQUENCY - 16) / (16) <= 0xFF
     #define TWI_PRESCALER 16
     #define TWPS0_VALUE 0
     #define TWPS1_VALUE 1
-#elif (F_CPU/I2C_FREQUENCY - 16) / (2 * 64) >= 10 \
-        && (F_CPU/I2C_FREQUENCY - 16) / (2 * 64) <= 0xFF
+#elif (F_CPU/I2C_FREQUENCY - 16) / (64) >= 0 \
+        && (F_CPU/I2C_FREQUENCY - 16) / (64) <= 0xFF
     #define TWI_PRESCALER 64
     #define TWPS0_VALUE 1
     #define TWPS1_VALUE 1
 #else
-    #error "I2C_FREQUENCY too low!"
+    #error "I2C_FREQUENCY too high!"
 #endif
 
 #define TWBR_VALUE ((F_CPU/I2C_FREQUENCY - 16) / (2 * TWI_PRESCALER))
@@ -1028,6 +1029,9 @@ void hal_systick_init() {
 
 	system_tick = 0;
 
+
+	/* set the oscillator to 8MHz */
+
 	TCCR0A = 0b10; //ctc mode
 
 	OCR0A = 249; //250-1
@@ -1035,7 +1039,7 @@ void hal_systick_init() {
 
 	//using timer0 with prescaler /8
 	//also start timer
-	TCCR0B = 0b011<<CSO;
+	TCCR0B = 0b001<<CSO;
 
 	TCNT0 = 0;
 
