@@ -52,7 +52,7 @@ ELFSIZE = $(SIZE) -A $(TARGET).elf
 
 AVRDUDE_PROGRAMMER = arduino
 
-AVRDUDE_PORT = /dev/ttyUSB0
+AVRDUDE_PORT = /dev/ttyACM0
 
 AVRDUDE_WRITE_FLASH =-DV -U flash:w:$(TARGET).hex:i
 

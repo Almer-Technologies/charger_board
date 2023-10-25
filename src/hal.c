@@ -239,20 +239,26 @@ void hal_sleep_idle(void) {
 /* hal uart */
 
 void hal_uart_init(void) {
+
+	hal_gpio_init_in(GPIOD, GPIO_PIN0);
+	hal_gpio_init_out(GPIOD, GPIO_PIN1);
+
 	uart.tx_busy = 0;
 	uart.rx_busy = 0;
 
-	uint16_t ubrr = 8; //115200 baud
+	uint16_t ubrr = 103; //9600 baud
 
 	UBRR0L = (uint8_t) ubrr;
 	UBRR0H = (uint8_t) ubrr>>8;
 
+	UCSR0A = (1<<U2X0);
+
 
 	//enable rx and/or tx
-	UCSR0B = (1<<TXENx) | (1<<RXENx);
+	UCSR0B = (1<<TXEN0) | (1<<RXEN0);
 
 	//set frame format 8 data 1 stop no parity
-	UCSR0C = (0b11<<UCSZx0);
+	UCSR0C = (0b11<<UCSZ00);
 }
 
 
@@ -1022,6 +1028,49 @@ void hal_spi_reg_read_it(uint8_t addr, uint8_t * data, uint16_t len, void (*tfr_
 
 
 
+/* hal pwm */
+
+
+// struct hal_pwm_data {
+
+// }[16] = {0};
+
+void hal_led_init(void) {
+	TCCR1A = 0b10; //ctc mode
+
+	ICR1 = 1499; //max
+
+	OCR1A = 499; //dim
+
+	OCR1B = 999; //bright
+
+	//using timer0 with prescaler /1
+	//also start timer
+	TCCR1B = 0b001<<CSO;
+
+	TCNT1 = 0;
+
+	TIMSK1 = (1<<OCIExB) | (1<<OCIExA) | (1<<TOIE1); //enable cmp A+B and ovf interrupt
+
+}
+
+uint8_t hal_led_attach(uint8_t * port, uint8_t pin);
+void hal_led_detach(uint8_t channel);
+void hal_led_set_brightness(uint8_t channel, uint8_t step);
+
+
+ISR(TIMER1_COMPA_vect) {
+
+}
+
+ISR(TIMER1_COMPB_vect) {
+
+}
+
+ISR(TIMER1_OVF_vect) {
+
+}
+
 
 /* hal systick */
 
@@ -1030,8 +1079,6 @@ void hal_systick_init() {
 	system_tick = 0;
 
 
-	/* set the oscillator to 8MHz */
-
 	TCCR0A = 0b10; //ctc mode
 
 	OCR0A = 249; //250-1
@@ -1039,7 +1086,7 @@ void hal_systick_init() {
 
 	//using timer0 with prescaler /8
 	//also start timer
-	TCCR0B = 0b001<<CSO;
+	TCCR0B = 0b011<<CSO;
 
 	TCNT0 = 0;
 

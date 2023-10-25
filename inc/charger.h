@@ -31,10 +31,14 @@ typedef enum charger_status {
 
 void charger_i2c_write(uint8_t reg, uint8_t data);
 
-void charger_i2c_read(uint8_t reg, uint8_t data);
+uint8_t charger_i2c_read(uint8_t reg);
 
 
 void charger_init(void);
+
+charger_type_t charger_get_type(void);
+
+charger_status_t charger_get_status(void);
 
 
 

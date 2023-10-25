@@ -122,6 +122,13 @@ uint8_t hal_uart_recv_char(void);
 void hal_uart_recv(uint8_t * data, uint16_t len);
 void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void));
 
+/* hal pwm */
+void hal_pwm_init(void);
+void hal_pwm_set_period(uint8_t period);
+uint8_t hal_pwm_attach(uint8_t * port, uint8_t pin);
+void hal_pwm_detach(uint8_t channel);
+void hal_pwm_set_duty(uint8_t channel);
+
 
 /* hal i2c */
 void hal_i2c_init(void);
