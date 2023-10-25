@@ -26,79 +26,6 @@ static charger_type_t type;
 
 
 
-
-void  feedback_thread_entry(void) {
-
-
-	for(;;) {
-
-		hal_gpio_clr(GPIOB, GPIO_PIN1);
-
-		os_delay(500);
-
-		hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_clr(GPIOB, GPIO_PIN0);
-
-		os_delay(500);
-
-		hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_clr(GPIOB, GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_clr(GPIOB, GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_clr(GPIOB, GPIO_PIN0|GPIO_PIN1);
-
-		os_delay(500);
-
-		hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_clr(GPIOB, GPIO_PIN0|GPIO_PIN1);
-
-		os_delay(500);
-
-		hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_clr(GPIOB, GPIO_PIN0|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_clr(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-
-		hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
-
-		os_delay(500);
-	}
-
-}
-
 void  control_thread_entry(void) {
 
 	charger_init();
@@ -112,14 +39,86 @@ void  control_thread_entry(void) {
 	}
 }
 
-void  logger_thread_entry(void) {
+
+static uint8_t led_r, led_g, led_b;
+
+typedef enum led_color {
+	LED_BLACK,
+	LED_RED,
+	LED_GREEN,
+	LED_BLUE,
+	LED_YELLOW,
+	LED_PURPLE,
+	LED_CYAN,
+	LED_WHITE
+}led_color_t;
+
+void led_init_rgb(void) {
+	led_r = hal_led_attach((uint8_t*)GPIOB, GPIO_PIN0);
+	led_b = hal_led_attach((uint8_t*)GPIOB, GPIO_PIN1);
+	led_g = hal_led_attach((uint8_t*)GPIOB, GPIO_PIN2);
+}
+
+void led_set_color(led_color_t color) {
+	switch (color){
+	case LED_BLACK:
+		hal_led_set_brightness(led_r, LED_OFF);
+		hal_led_set_brightness(led_g, LED_OFF);
+		hal_led_set_brightness(led_b, LED_OFF);
+		break;
+	case LED_RED:
+		hal_led_set_brightness(led_r, LED_ON);
+		hal_led_set_brightness(led_g, LED_OFF);
+		hal_led_set_brightness(led_b, LED_OFF);
+		break;
+	case LED_GREEN:
+		hal_led_set_brightness(led_r, LED_OFF);
+		hal_led_set_brightness(led_g, LED_ON);
+		hal_led_set_brightness(led_b, LED_OFF);
+		break;
+	case LED_BLUE:
+		hal_led_set_brightness(led_r, LED_OFF);
+		hal_led_set_brightness(led_g, LED_OFF);
+		hal_led_set_brightness(led_b, LED_ON);
+		break;
+	case LED_YELLOW:
+		hal_led_set_brightness(led_r, LED_ON);
+		hal_led_set_brightness(led_g, LED_ON);
+		hal_led_set_brightness(led_b, LED_OFF);
+		break;
+	case LED_PURPLE:
+		hal_led_set_brightness(led_r, LED_ON);
+		hal_led_set_brightness(led_g, LED_OFF);
+		hal_led_set_brightness(led_b, LED_ON);
+		break;
+	case LED_CYAN:
+		hal_led_set_brightness(led_r, LED_OFF);
+		hal_led_set_brightness(led_g, LED_ON);
+		hal_led_set_brightness(led_b, LED_ON);
+		break;
+	case LED_WHITE:
+		hal_led_set_brightness(led_r, LED_ON);
+		hal_led_set_brightness(led_g, LED_ON);
+		hal_led_set_brightness(led_b, LED_ON);
+		break;
+	}
+}
+
+void  feedback_thread_entry(void) {
 
 	hal_print("Charger Board\n");
 	hal_print("Almer Technologies\n");
 	hal_print("Iacopo Sprenger\n");
 	hal_print("Jan Vrkoslav\n");
 
+	
+
+	/* setup feedback leds */
+	led_init_rgb();
+
 	os_delay(500);
+
+	
 
 	for(;;) {
 		hal_gpio_clr(GPIOB, GPIO_PIN1);
@@ -169,21 +168,27 @@ void  logger_thread_entry(void) {
 		switch(status) {
 		case CS_NONE:
 			hal_print_it("None\n");
+			led_set_color(LED_OFF);
 			break;
 		case CS_TRICKLE:
 			hal_print_it("Trickle charge\n");
+			led_set_color(LED_RED);
 			break;
 		case CS_PRE:
 			hal_print_it("Pre charge\n");
+			led_set_color(LED_YELLOW);
 			break;
 		case CS_FAST:
 			hal_print_it("Fast charge\n");
+			led_set_color(LED_WHITE);
 			break;
 		case CS_CONST:
 			hal_print_it("Constant charge\n");
+			led_set_color(LED_CYAN);
 			break;
 		case CS_DONE:
 			hal_print_it("Done!\n");
+			led_set_color(LED_GREEN);
 			break;
 		}
 		os_delay(800);
@@ -198,15 +203,13 @@ int main(void) {
 	hal_systick_init();
 	hal_uart_init();
 	hal_i2c_init();
+	hal_led_init();
 	os_system_init();
 
 
 
 
-	/* setup feedback leds */
-	hal_gpio_init_out(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
 
-	hal_gpio_set(GPIOB, GPIO_PIN0|GPIO_PIN1|GPIO_PIN2);
 
 	/* threads definitions */
 
@@ -227,7 +230,7 @@ int main(void) {
 
 
 	/* threads creation */
-	os_thread_createI(&feedback_thread, 3, logger_thread_entry, feedback_stack, sizeof(feedback_stack));
+	os_thread_createI(&feedback_thread, 3, feedback_thread_entry, feedback_stack, sizeof(feedback_stack));
 	os_thread_createI(&control_thread, 2, control_thread_entry, control_stack, sizeof(control_stack));
 
 

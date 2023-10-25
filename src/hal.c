@@ -1031,11 +1031,20 @@ void hal_spi_reg_read_it(uint8_t addr, uint8_t * data, uint16_t len, void (*tfr_
 /* hal pwm */
 
 
-// struct hal_pwm_data {
+#define MAX_LEDS 16
 
-// }[16] = {0};
+static struct  {
+	uint8_t * port;
+	uint8_t pin;
+	hal_led_brightness_t step;
+} hal_led_data[MAX_LEDS] = {0};
+
+static uint8_t hal_led_count;
 
 void hal_led_init(void) {
+
+	hal_led_count = 0;
+
 	TCCR1A = 0b10; //ctc mode
 
 	ICR1 = 1499; //max
@@ -1054,21 +1063,50 @@ void hal_led_init(void) {
 
 }
 
-uint8_t hal_led_attach(uint8_t * port, uint8_t pin);
-void hal_led_detach(uint8_t channel);
-void hal_led_set_brightness(uint8_t channel, uint8_t step);
+uint8_t hal_led_attach(uint8_t * port, uint8_t pin) {
+	if(hal_led_count < MAX_LEDS) {
+		hal_gpio_init_out(port, pin);
+		hal_gpio_set(port, pin);
+		hal_led_data[hal_led_count].port = port;
+		hal_led_data[hal_led_count].pin = pin;
+		hal_led_data[hal_led_count].step = LED_OFF;
+		hal_led_count++;
+		return hal_led_count;
+	} else {
+		return 0;
+	}
+}
+void hal_led_set_brightness(uint8_t channel, hal_led_brightness_t step) {
+	if(channel <= hal_led_count && channel > 0) {
+		hal_led_data[channel-1].step = step;
+	}
+}
 
 
 ISR(TIMER1_COMPA_vect) {
-
+	for(uint8_t i = 0; i < hal_led_count; i++) {
+		if(hal_led_data[i].step == LED_HIGH) {
+			hal_gpio_set(hal_led_data[i].port, hal_led_data[i].pin);
+		}
+	}
 }
 
 ISR(TIMER1_COMPB_vect) {
-
+	for(uint8_t i = 0; i < hal_led_count; i++) {
+		if(hal_led_data[i].step == LED_LOW) {
+			hal_gpio_set(hal_led_data[i].port, hal_led_data[i].pin);
+		}
+	}
 }
 
 ISR(TIMER1_OVF_vect) {
-
+	for(uint8_t i = 0; i < hal_led_count; i++) {
+		if(hal_led_data[i].step == LED_OFF) {
+			hal_gpio_set(hal_led_data[i].port, hal_led_data[i].pin);
+		} else {
+			hal_gpio_clr(hal_led_data[i].port, hal_led_data[i].pin);
+		}
+	}
 }
 
 

@@ -123,11 +123,16 @@ void hal_uart_recv(uint8_t * data, uint16_t len);
 void hal_uart_recv_it(uint8_t * data, uint16_t len, void (*rx_cmplt)(void));
 
 /* hal pwm */
-void hal_pwm_init(void);
-void hal_pwm_set_period(uint8_t period);
-uint8_t hal_pwm_attach(uint8_t * port, uint8_t pin);
-void hal_pwm_detach(uint8_t channel);
-void hal_pwm_set_duty(uint8_t channel);
+typedef enum hal_led_brightness {
+    LED_OFF,
+    LED_LOW,
+    LED_HIGH,
+    LED_ON,
+}hal_led_brightness_t;
+
+void hal_led_init(void);
+uint8_t hal_led_attach(uint8_t * port, uint8_t pin);
+void hal_led_set_brightness(uint8_t channel, hal_led_brightness_t step);
 
 
 /* hal i2c */
