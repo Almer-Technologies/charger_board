@@ -11,7 +11,7 @@ TOOLCHAIN=../avr8-gnu-toolchain-linux_x86_64/bin
 
 MCU=atmega328p
 
-CPU_FREQ=16000000UL
+CPU_FREQ=8000000UL
 
 OPT=s
 
