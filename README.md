@@ -4,6 +4,11 @@
 
 Small real time operating system for the atmega328p mcu.
 
+This works with the internal 8MHz oscillator, you have to blow the fuses with the following settings:
+LOW:	0xE2
+HIGH:	0xD9
+EXT:	0xFF	
+
 
 ## Features
 
